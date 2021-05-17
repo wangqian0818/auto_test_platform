@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="http://apps.bdimg.com/libs/jquery/1.11.1/jquery.min.js"></script>
+</head>
+<body>
+<table border="1">
+    <tr>
+        <th>计划名称</th>
+        <th>运行环境</th>
+        <th>已选用例条数</th>
+        <th>已选用例id列表</th>
+        <th>成功用例条数</th>
+        <th>成功用例id列表</th>
+        <th>失败用例条数</th>
+        <th>失败用例id列表</th>
+        <th>耗时</th>
+        <th>测试目的</th>
+        <th>执行者</th>
+        <th>分析者</th>
+        <th>结果类型</th>
+        <th>分析结果</th>
+        <th>循环次数</th>
+        <th>组件版本</th>
+        <th>最后一次运行时间</th>
+        <th>下次计划</th>
+        <th>修改操作</th>
+        <th>删除操作</th>
+        <th>执行操作</th>
+        <th>查看报告</th>
+    </tr>
+    {% for plan in plans %}
+    <tr>
+        <td>{{ plan.plan_name }}</td>
+        <td>{{ plan.run_env }}</td>
+        <td>{{ plan.case_num }}</td>
+        <td>{{ plan.case_list }}</td>
+        <td>{{ plan.pass_num }}</td>
+        <td>{{ plan.pass_list }}</td>
+        <td>{{ plan.fail_num }}</td>
+        <td>{{ plan.fail_list }}</td>
+        <td>{{ plan.time }}</td>
+        <td>{{ plan.purpose }}</td>
+        <td>{{ plan.executor }}</td>
+        <td>{{ plan.analyst }}</td>
+        <td>{{ plan.result_type }}</td>
+        <td>{{ plan.analysis_result }}</td>
+        <td>{{ plan.cycle_num }}</td>
+        <td>{{ plan.component_version }}</td>
+        <td>{{ plan.last_run }}</td>
+        <td>{{ plan.last_plan }}</td>
+        <td><a href="{% url 'update_plan' plan.pk %}">修改</a></td>
+        <td><a href="{% url 'delete_plan' plan.pk %}">删除</a></td>
+        <td><a href="{% url 'exec' plan.pk %}">执行</a></td>
+        <td><a href="{% url 'history_report' plan.pk %}">查看报告</a></td>
+    </tr>
+    {% endfor %}
+</table>
+<a href="{% url 'add_plan' %}">
+    <button>添加计划</button>
+</a>
+<hr>
+ 
+<div id="content">
+    <a id="dianji">点击</a>
+    <div id="disappare" style="display:none;">
+    <h2>标题</h2>
+    <p>3秒后我会自动消失3秒后我会自动消失</p>
+    </div>
+</div>
+<script type="text/javascript">
+    $(function(){
+        $("#dianji").click(function(){
+            $("#disappare").show().delay(3000).hide(300);
+        });
+    })
+</script>
+
+<hr>
+<div>
+    <button onclick="myFunction()">点我</button>
+</div>
+<p id="demo"></p>
+</body>
+<script>
+    function myFunction(){
+        var x;
+        var r=confirm("按下按钮!");
+        if (r==true){
+            x="你按下了\"确定\"按钮!";
+        }
+        else{
+            x="你按下了\"取消\"按钮!";
+        }
+        document.getElementById("demo").innerHTML=x;
+    }
+
+</script>
+
+<!--{% if messages %}-->
+<!--<script>-->
+<!--    {% for msg in messages %}-->
+<!--      alert('{{ msg.message }}');-->
+<!--    {% endfor %}-->
+<!--  -->
+<!--</script>-->
+<!--{% endif %}-->
+
+
+<!--{% if messages %}-->
+<!--<ul class="messages">-->
+<!--    {% for message in messages %}-->
+<!--    <li-->
+<!--    {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>-->
+<!--    {% endfor %}-->
+<!--</ul>-->
+<!--{% endif %}-->
+</html>

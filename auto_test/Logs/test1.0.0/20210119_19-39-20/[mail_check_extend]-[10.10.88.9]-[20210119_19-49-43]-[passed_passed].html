@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.log {
+  background-color: #e6e6e6;
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  height: 230px;
+  overflow-y: scroll;
+  padding: 5px;
+  white-space: pre-wrap;
+}
+.log:only-child {
+  height: inherit;
+}
+
+div.image {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.image img {
+  width: 320px;
+}
+
+div.video {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.video video {
+  overflow: hidden;
+  width: 320px;
+  height: 240px;
+}
+
+.collapsed {
+  display: none;
+}
+
+.expander::after {
+  content: " (show details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.collapser::after {
+  content: " (hide details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 0px;
+  float: left;
+  margin-right: 5px;
+  margin-top: 5px;
+  /*triangle*/
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.inactive .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #E6E6E6;
+}
+.asc.active .sort-icon {
+  /*finish triangle*/
+  border-bottom: 8px solid #999;
+}
+.desc.active .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>[mail_check_extend]-[10.10.88.9]-[20210119_19-49-43].html</h1>
+    <p>Report generated on 19-Jan-2021 at 19:54:13 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.8.1", "pytest": "5.3.5"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.19041-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"allure-pytest": "2.8.10", "html": "3.1.1", "metadata": "1.11.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.3</td></tr>
+      <tr>
+        <td>用例执行时间</td>
+        <td>2021-01-19 19:49:44</td></tr>
+      <tr>
+        <td>设备IP</td>
+        <td>10.10.88.9</td></tr></table>
+    <h2>Summary</h2>
+    <p>所属部门: 卓讯-合肥测试部</p>
+    <p>测试人员: 王谦</p>
+    <p>2 tests ran in 269.80 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">2 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">0 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable time" col="time">Time</th>
+          <th>Test_nodeId</th>
+          <th class="sortable" col="duration">Duration</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-time">2021-01-19 11:54:13.996754</td>
+          <td>Case_rbm/mail_check_extend/function.py::Test_mail_check_extend::test_mail_check_extend_a1</td>
+          <td class="col-duration">134.50</td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>ssh 连接开始
+ssh服务器: 10.10.88.9连接成功
+export cardid=0&amp;&amp;switch-jsac --set --switch on
+export cardid=0&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;defconf  --action forward
+export cardid=0&amp;&amp;defconf  --action forward 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --selabel on
+export cardid=0&amp;&amp;defconf --selabel on 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --cycle 15
+export cardid=0&amp;&amp;defconf --cycle 15 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --domain off
+export cardid=0&amp;&amp;defconf --domain off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --netflow off
+export cardid=0&amp;&amp;defconf --netflow off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --ipv4acl off
+export cardid=0&amp;&amp;defconf --ipv4acl off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --syncookie off
+export cardid=0&amp;&amp;defconf --syncookie off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --ckoption off
+export cardid=0&amp;&amp;defconf --ckoption off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --noflow off
+export cardid=0&amp;&amp;defconf --noflow off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --droperr off
+export cardid=0&amp;&amp;defconf --droperr off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --tcpmss 0
+export cardid=0&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;switch-jsac --set --switch on
+export cardid=1&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;defconf  --action forward
+export cardid=1&amp;&amp;defconf  --action forward 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --selabel on
+export cardid=1&amp;&amp;defconf --selabel on 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --cycle 15
+export cardid=1&amp;&amp;defconf --cycle 15 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --domain off
+export cardid=1&amp;&amp;defconf --domain off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --netflow off
+export cardid=1&amp;&amp;defconf --netflow off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --ipv4acl off
+export cardid=1&amp;&amp;defconf --ipv4acl off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --syncookie off
+export cardid=1&amp;&amp;defconf --syncookie off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --ckoption off
+export cardid=1&amp;&amp;defconf --ckoption off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --noflow off
+export cardid=1&amp;&amp;defconf --noflow off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --droperr off
+export cardid=1&amp;&amp;defconf --droperr off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --tcpmss 0
+export cardid=1&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=0&amp;&amp;selabel --clear 指令发送成功!
+export cardid=0&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=1&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=1&amp;&amp;selabel --clear 指令发送成功!
+export cardid=1&amp;&amp;qos-jsac --clear 指令发送成功!
+<br/> ------------------------------Captured stdout call------------------------------ <br/>export cardid=0&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=0&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=0&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=0&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=0&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=0&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=0&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=0&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=0&amp;&amp;defconf --tcpmss 0 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=1&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=1&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=1&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=1&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=1&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=1&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=1&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=1&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      11503 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11504 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11505 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11506 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11507 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11508 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11509 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11510 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11511 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11512 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11513 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11514 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11515 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11516 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11517 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11518 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11519 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11520 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11521 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11522 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11523 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11524 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11525 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11526 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11534  10346  0 19:50 ?        00:00:00 bash -c ps -ef |grep nginx
+root      11549  11534  0 19:50 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:31 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      11574 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11575 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11576 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11577 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11578 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11579 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11580 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11581 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11582 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11583 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11584 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11585 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11586 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11587 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11588 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11589 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11590 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11591 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11592 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11593 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11594 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11595 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11596 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11597 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11607  10346  0 19:50 ?        00:00:00 bash -c ps -ef |grep nginx
+root      11622  11607  0 19:50 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:32 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+cat /etc/jsac/protocol.stream 指令发送成功!
+upstream smtp8885 {
+	server 220.181.12.11:25;
+}
+server {
+	listen 10.10.88.9:8885;
+	proxy_pass smtp8885;
+	proxy_service smtp;
+}
+upstream pop38886 {
+	server 220.181.12.110:110;
+}
+server {
+	listen 10.10.88.9:8886;
+	proxy_pass pop38886;
+	proxy_service pop3;
+}
+
+cat /etc/jsac/protocol.stream 指令发送成功!
+cat /etc/jsac/protocol.stream 指令发送成功!
+upstream smtp8885 {
+	server 220.181.12.11:25;
+}
+server {
+	listen 10.10.88.9:8885;
+	proxy_pass smtp8885;
+	proxy_service smtp;
+}
+upstream pop38886 {
+	server 220.181.12.110:110;
+}
+server {
+	listen 10.10.88.9:8886;
+	proxy_pass pop38886;
+	proxy_service pop3;
+}
+
+cat /etc/jsac/protocol.stream 指令发送成功!
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      11724 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11725 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11726 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11727 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11728 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11729 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11730 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11731 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11732 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11733 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11734 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11735 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11736 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11737 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11738 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11739 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11740 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11741 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11742 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11743 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11744 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11745 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11746 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11747 157514  0 19:50 ?        00:00:00 nginx: worker process
+root      11755  10346  0 19:50 ?        00:00:00 bash -c ps -ef |grep nginx
+root      11770  11755  0 19:50 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:33 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+cat /etc/jsac/filter.json 指令发送成功!
+{
+	&quot;mail&quot;:	{
+		&quot;deny-suffix&quot;:	[&quot;txt&quot;]
+	},
+	&quot;ftp&quot;:	{
+		&quot;allow-download&quot;:	[&quot;pdf&quot;]
+	}
+}
+cat /etc/jsac/filter.json 指令发送成功!
+cat /etc/jsac/filter.json 指令发送成功!
+{
+	&quot;mail&quot;:	{
+		&quot;deny-suffix&quot;:	[&quot;txt&quot;]
+	},
+	&quot;ftp&quot;:	{
+		&quot;allow-download&quot;:	[&quot;pdf&quot;]
+	}
+}
+cat /etc/jsac/filter.json 指令发送成功!
+准备添加附件...
+黑名单文件扩展名1.txt结果为:0
+准备添加附件...
+非黑名单文件扩展名1.xls结果为:1
+*cmd* &#x27;USER m53667987@163.com&#x27;
+*cmd* &#x27;PASS GWCARVNCOYZWYHYB&#x27;
+*cmd* &#x27;STAT&#x27;
+*stat* [b&#x27;+OK&#x27;, b&#x27;29&#x27;, b&#x27;390404&#x27;]
+*cmd* &#x27;LIST&#x27;
+*cmd* &#x27;RETR 29&#x27;
+*cmd* &#x27;QUIT&#x27;
+From:  &lt;liwanqiu66@163.com&gt;
+To:  &lt;m53667987@163.com&gt;
+Cc:  &lt;liwanqiu66@163.com&gt;
+Subject: 我不是黑名单主题!!
+part 0
+--------------------
+  Text: 测试测试测试...
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      11873 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11874 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11875 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11876 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11877 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11878 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11879 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11880 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11881 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11882 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11883 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11884 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11885 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11886 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11887 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11888 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11889 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11890 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11891 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11892 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11893 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11894 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11895 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11896 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11904  10346  0 19:51 ?        00:00:00 bash -c ps -ef |grep nginx
+root      11919  11904  0 19:51 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:34 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      11949 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11950 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11951 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11952 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11953 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11954 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11955 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11956 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11957 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11958 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11959 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11960 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11961 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11962 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11963 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11964 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11965 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11966 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11967 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11968 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11969 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11970 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11971 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11972 157514  0 19:51 ?        00:00:00 nginx: worker process
+root      11979  10346  0 19:51 ?        00:00:00 bash -c ps -ef |grep nginx
+root      11994  11979  0 19:51 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:35 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+cat /etc/jsac/protocol.stream 指令发送成功!
+
+cat /etc/jsac/protocol.stream 指令发送成功!
+cat /etc/jsac/protocol.stream 指令发送成功!
+
+cat /etc/jsac/protocol.stream 指令发送成功!
+<br/> ----------------------------Captured stdout teardown---------------------------- <br/>export cardid=0&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=0&amp;&amp;selabel --clear 指令发送成功!
+export cardid=0&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=1&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=1&amp;&amp;selabel --clear 指令发送成功!
+export cardid=1&amp;&amp;qos-jsac --clear 指令发送成功!
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-time">2021-01-19 11:54:13.997751</td>
+          <td>Case_rbm/mail_check_extend/function.py::Test_mail_check_extend::test_mail_check_extend_a2</td>
+          <td class="col-duration">134.87</td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>export cardid=0&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=0&amp;&amp;selabel --clear 指令发送成功!
+export cardid=0&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=1&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=1&amp;&amp;selabel --clear 指令发送成功!
+export cardid=1&amp;&amp;qos-jsac --clear 指令发送成功!
+<br/> ------------------------------Captured stdout call------------------------------ <br/>export cardid=0&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=0&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=0&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=0&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=0&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=0&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=0&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=0&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=0&amp;&amp;defconf --tcpmss 0 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=1&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=1&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=1&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=1&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=1&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=1&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=1&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=1&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      12793 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12794 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12795 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12796 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12797 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12798 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12799 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12800 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12801 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12802 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12803 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12804 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12805 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12806 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12807 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12808 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12809 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12810 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12811 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12812 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12813 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12814 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12815 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12816 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12824  10346  0 19:52 ?        00:00:00 bash -c ps -ef |grep nginx
+root      12839  12824  0 19:52 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:36 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      12865 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12866 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12867 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12868 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12869 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12870 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12871 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12872 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12873 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12874 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12875 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12876 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12877 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12878 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12879 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12880 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12881 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12882 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12883 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12884 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12885 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12886 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12887 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12888 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      12913  10346  0 19:52 ?        00:00:00 bash -c ps -ef |grep nginx
+root      12928  12913  0 19:52 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:37 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+cat /etc/jsac/protocol.stream 指令发送成功!
+upstream smtp8885 {
+	server 220.181.12.11:25;
+}
+server {
+	listen 10.10.88.9:8885;
+	proxy_pass smtp8885;
+	proxy_service smtp;
+}
+upstream pop38886 {
+	server 220.181.12.110:110;
+}
+server {
+	listen 10.10.88.9:8886;
+	proxy_pass pop38886;
+	proxy_service pop3;
+}
+
+cat /etc/jsac/protocol.stream 指令发送成功!
+cat /etc/jsac/protocol.stream 指令发送成功!
+upstream smtp8885 {
+	server 220.181.12.11:25;
+}
+server {
+	listen 10.10.88.9:8885;
+	proxy_pass smtp8885;
+	proxy_service smtp;
+}
+upstream pop38886 {
+	server 220.181.12.110:110;
+}
+server {
+	listen 10.10.88.9:8886;
+	proxy_pass pop38886;
+	proxy_service pop3;
+}
+
+cat /etc/jsac/protocol.stream 指令发送成功!
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      13031 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13032 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13033 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13034 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13035 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13036 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13037 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13038 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13039 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13040 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13041 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13042 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13043 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13044 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13045 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13046 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13047 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13048 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13049 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13050 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13051 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13052 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13053 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13054 157514  0 19:52 ?        00:00:00 nginx: worker process
+root      13061  10346  0 19:52 ?        00:00:00 bash -c ps -ef |grep nginx
+root      13076  13061  0 19:52 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:38 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+cat /etc/jsac/filter.json 指令发送成功!
+{
+	&quot;mail&quot;:	{
+		&quot;deny-suffix&quot;:	[&quot;txt&quot;, &quot;pdf&quot;]
+	},
+	&quot;ftp&quot;:	{
+		&quot;allow-download&quot;:	[&quot;pdf&quot;]
+	}
+}
+cat /etc/jsac/filter.json 指令发送成功!
+cat /etc/jsac/filter.json 指令发送成功!
+{
+	&quot;mail&quot;:	{
+		&quot;deny-suffix&quot;:	[&quot;txt&quot;, &quot;pdf&quot;]
+	},
+	&quot;ftp&quot;:	{
+		&quot;allow-download&quot;:	[&quot;pdf&quot;]
+	}
+}
+cat /etc/jsac/filter.json 指令发送成功!
+cat /etc/jsac/filter.json 指令发送成功!
+{
+	&quot;mail&quot;:	{
+		&quot;deny-suffix&quot;:	[&quot;txt&quot;, &quot;pdf&quot;]
+	},
+	&quot;ftp&quot;:	{
+		&quot;allow-download&quot;:	[&quot;pdf&quot;]
+	}
+}
+cat /etc/jsac/filter.json 指令发送成功!
+准备添加附件...
+第一个黑名单文件扩展名1.txt结果为:0
+准备添加附件...
+第二个黑名单文件扩展名1.pdf结果为:0
+准备添加附件...
+非黑名单文件扩展名1.xls结果为:1
+*cmd* &#x27;USER m53667987@163.com&#x27;
+*cmd* &#x27;PASS GWCARVNCOYZWYHYB&#x27;
+*cmd* &#x27;STAT&#x27;
+*stat* [b&#x27;+OK&#x27;, b&#x27;30&#x27;, b&#x27;416824&#x27;]
+*cmd* &#x27;LIST&#x27;
+*cmd* &#x27;RETR 30&#x27;
+*cmd* &#x27;QUIT&#x27;
+From:  &lt;liwanqiu66@163.com&gt;
+To:  &lt;m53667987@163.com&gt;
+Cc:  &lt;liwanqiu66@163.com&gt;
+Subject: 测试黑名单附件扩展名
+part 0
+--------------------
+  Text: 测试测试测试...
+part 1
+--------------------
+  Attachment: application/octet-stream
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      13236 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13237 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13238 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13239 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13240 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13241 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13242 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13243 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13244 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13245 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13246 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13247 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13248 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13249 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13250 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13251 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13252 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13253 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13254 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13255 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13256 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13257 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13258 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13259 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13271  10346  0 19:53 ?        00:00:00 bash -c ps -ef |grep nginx
+root      13286  13271  0 19:53 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:39 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      13312 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13313 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13314 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13315 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13316 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13317 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13318 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13319 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13320 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13321 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13322 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13323 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13324 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13325 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13326 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13327 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13328 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13329 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13330 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13331 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13332 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13333 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13334 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13335 157514  0 19:53 ?        00:00:00 nginx: worker process
+root      13342  10346  0 19:53 ?        00:00:00 bash -c ps -ef |grep nginx
+root      13357  13342  0 19:53 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:00:40 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+cat /etc/jsac/protocol.stream 指令发送成功!
+
+cat /etc/jsac/protocol.stream 指令发送成功!
+cat /etc/jsac/protocol.stream 指令发送成功!
+
+cat /etc/jsac/protocol.stream 指令发送成功!
+<br/> ----------------------------Captured stdout teardown---------------------------- <br/>export cardid=0&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=0&amp;&amp;selabel --clear 指令发送成功!
+export cardid=0&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=1&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=1&amp;&amp;selabel --clear 指令发送成功!
+export cardid=1&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=0&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=0&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=0&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=0&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=0&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=0&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=0&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=0&amp;&amp;defconf --tcpmss 0 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=1&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=1&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=1&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=1&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=1&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=1&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=1&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=1&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Rabbitmq连接: 10.10.88.32:5671 已断开.
+连接向ssh服务器10.10.88.9的连接已关闭
+<br/></div></td></tr></tbody></table></body></html>

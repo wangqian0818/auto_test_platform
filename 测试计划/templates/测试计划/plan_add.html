@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="keywords" content="jquery,ui,easy,easyui,web">
+    <meta name="description" content="easyui help you build your web page easily!">
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" type="text/css" href="https://www.jeasyui.com/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="https://www.jeasyui.com/easyui/themes/icon.css">
+    <script type="text/javascript" src="https://www.jeasyui.com/easyui/jquery.min.js"></script>
+    <script type="text/javascript" src="https://www.jeasyui.com/easyui/jquery.easyui.min.js"></script>
+</head>
+<body>
+<form action="{% url 'add_plan' %}" method="post">
+    {% csrf_token %}
+    <p><input type="text" name="plan_name" placeholder="请输入plan_name"></p>
+    <p>请输入purpose:
+    <select name="purpose">
+        <option value="空" selected>----------</option>
+        <option value="冒烟测试">冒烟测试</option>
+        <option value="回归bug">回归bug</option>
+        <option value="回归版本">回归版本</option>
+        <option value="出厂测试">出厂测试</option>
+        <option value="功能测试">功能测试</option>
+        <option value="性能测试">性能测试</option>
+        <option value="稳定性测试">稳定性测试</option>
+    </select></p>
+    <p>请输入result_type:
+    <select name="result_type">
+        <option value="空" selected>----------</option>
+        <option value="版本问题">版本问题</option>
+        <option value="环境问题">环境问题</option>
+        <option value="脚本问题">脚本问题</option>
+    </select>
+    </p>
+    <p><input type="text" name="analysis_result" placeholder="请输入分析结果"></p>
+    <p><input type="text" name="cycle_num" placeholder="请输入循环次数"></p>
+    <hr>
+<!--    <ul id="tt" class="easyui-tree"-->
+<!--        url="./tree_test_data.json"-->
+<!--        checkbox="true">-->
+<!--    </ul>-->
+    <p>请选择gitCase</p>
+    {% for gitCase in gitCases %}
+    <p><input type="checkbox" name='gitCase_title' value='{{ gitCase.id }}'>{{ gitCase.case_title }}</p>
+    {% endfor %}
+    <p><input type="submit" value="提交"></p>
+</form>
+</body>
+</html>

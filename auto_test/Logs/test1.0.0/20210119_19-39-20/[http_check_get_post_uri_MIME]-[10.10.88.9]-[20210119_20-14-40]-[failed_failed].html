@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.log {
+  background-color: #e6e6e6;
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  height: 230px;
+  overflow-y: scroll;
+  padding: 5px;
+  white-space: pre-wrap;
+}
+.log:only-child {
+  height: inherit;
+}
+
+div.image {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.image img {
+  width: 320px;
+}
+
+div.video {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.video video {
+  overflow: hidden;
+  width: 320px;
+  height: 240px;
+}
+
+.collapsed {
+  display: none;
+}
+
+.expander::after {
+  content: " (show details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.collapser::after {
+  content: " (hide details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 0px;
+  float: left;
+  margin-right: 5px;
+  margin-top: 5px;
+  /*triangle*/
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.inactive .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #E6E6E6;
+}
+.asc.active .sort-icon {
+  /*finish triangle*/
+  border-bottom: 8px solid #999;
+}
+.desc.active .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>[http_check_get_post_uri_MIME]-[10.10.88.9]-[20210119_20-14-40].html</h1>
+    <p>Report generated on 19-Jan-2021 at 20:19:59 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.8.1", "pytest": "5.3.5"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.19041-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"allure-pytest": "2.8.10", "html": "3.1.1", "metadata": "1.11.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.3</td></tr>
+      <tr>
+        <td>用例执行时间</td>
+        <td>2021-01-19 20:14:41</td></tr>
+      <tr>
+        <td>设备IP</td>
+        <td>10.10.88.9</td></tr></table>
+    <h2>Summary</h2>
+    <p>所属部门: 卓讯-合肥测试部</p>
+    <p>测试人员: 王谦</p>
+    <p>2 tests ran in 318.16 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">0 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">2 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable time" col="time">Time</th>
+          <th>Test_nodeId</th>
+          <th class="sortable" col="duration">Duration</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-time">2021-01-19 12:19:59.575614</td>
+          <td>Case_rbm/http_check_get_post_uri_MIME/function.py::Test_http_check_get_post_uri_MIME::test_http_check_get_post_uri_MIME_a1</td>
+          <td class="col-duration">163.72</td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;http_check_get_post_uri_MIME.function.Test_http_check_get_post_uri_MIME object at 0x0000028BEA4C3860&gt;<br/><br/>    @allure.feature(&#x27;验证基于URI黑名单、get请求方法、post请求方法、MIME多种类型设置放行的网页访问策略&#x27;)<br/>    def test_http_check_get_post_uri_MIME_a1(self):<br/>    	# 清空环境<br/>    	for i in self.clr_env:<br/>    		fun.cmd(i, &#x27;gw&#x27;)<br/>    <br/>    	# 下发配置<br/>    	fun.send(rbmExc, message.addhttp[&#x27;AddAgent&#x27;], rbmDomain, base_path)<br/>    	fun.wait_data(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.nginx_worker(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	# 检查配置下发是否成功<br/>    	# for key in self.case1_step1:<br/>    	# 	re = fun.cmd(self.case1_step1[key][0], &#x27;gw&#x27;)<br/>    	# 	print(re)<br/>    	# 	fun.wait_data(self.case1_step1[key][0], &#x27;gw&#x27;, self.case1_step1[key][1], &#x27;配置&#x27;, 100)<br/>    	# 	assert self.case1_step1[key][1] in re<br/>    <br/>    	fun.send(rbmExc, message.httpcheck1[&#x27;SetHttpCheck&#x27;], rbmDomain, base_path)<br/>    	fun.wait_data(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.nginx_worker(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	for key in self.case1_step2:<br/>    		re = fun.cmd(self.case1_step2[key][0], &#x27;gw&#x27;)<br/>    		print(re)<br/>    		fun.wait_data(self.case1_step2[key][0], &#x27;gw&#x27;, self.case1_step2[key][1], &#x27;配置&#x27;, 100)<br/>    		assert self.case1_step2[key][1] in re<br/>    <br/>    	# 1、发送get请求，不包含黑名单内容的普通请求<br/>    	content = http_check.http_get(url)<br/>    	print(&#x27;1、get普通请求的请求内容为：{}&#x27;.format(content))<br/>    	assert content == http_content<br/>    <br/>    	# 2、发送post请求，不包含黑名单内容的普通请求<br/>    	content = http_check.http_post(url)<br/>    	print(&#x27;2、post普通请求的请求内容为：{}&#x27;.format(content))<br/>    	assert content == http_content<br/>    <br/>    	# 3、发送get请求，请求内容包含第一个get黑名单<br/>    	status_code1 = http_check.http_get(url,self.case1_get_data1)<br/>    	print(&#x27;3、get请求内容包含第一个get黑名单返回的状态码为：{}&#x27;.format(status_code1))<br/>&gt;   	assert status_code1 == 403<br/><span class="error">E    AssertionError: assert &#x27;You got right!&#x27; == 403</span><br/><br/>Case_rbm\http_check_get_post_uri_MIME\function.py:124: AssertionError<br/> -----------------------------Captured stdout setup------------------------------ <br/>ssh 连接开始
+ssh服务器: 10.10.88.9连接成功
+export cardid=0&amp;&amp;switch-jsac --set --switch on
+export cardid=0&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=0&amp;&amp;defconf  --action forward
+export cardid=0&amp;&amp;defconf  --action forward 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --selabel on
+export cardid=0&amp;&amp;defconf --selabel on 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --cycle 15
+export cardid=0&amp;&amp;defconf --cycle 15 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --domain off
+export cardid=0&amp;&amp;defconf --domain off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --netflow off
+export cardid=0&amp;&amp;defconf --netflow off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --ipv4acl off
+export cardid=0&amp;&amp;defconf --ipv4acl off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --syncookie off
+export cardid=0&amp;&amp;defconf --syncookie off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --ckoption off
+export cardid=0&amp;&amp;defconf --ckoption off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --noflow off
+export cardid=0&amp;&amp;defconf --noflow off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --droperr off
+export cardid=0&amp;&amp;defconf --droperr off 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;defconf --tcpmss 0
+export cardid=0&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;switch-jsac --set --switch on
+export cardid=1&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+Set successfully.
+
+export cardid=1&amp;&amp;defconf  --action forward
+export cardid=1&amp;&amp;defconf  --action forward 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --selabel on
+export cardid=1&amp;&amp;defconf --selabel on 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --cycle 15
+export cardid=1&amp;&amp;defconf --cycle 15 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --domain off
+export cardid=1&amp;&amp;defconf --domain off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --netflow off
+export cardid=1&amp;&amp;defconf --netflow off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --ipv4acl off
+export cardid=1&amp;&amp;defconf --ipv4acl off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --syncookie off
+export cardid=1&amp;&amp;defconf --syncookie off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --ckoption off
+export cardid=1&amp;&amp;defconf --ckoption off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --noflow off
+export cardid=1&amp;&amp;defconf --noflow off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --droperr off
+export cardid=1&amp;&amp;defconf --droperr off 指令发送成功!
+Success.
+
+export cardid=1&amp;&amp;defconf --tcpmss 0
+export cardid=1&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Success.
+
+export cardid=0&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=0&amp;&amp;selabel --clear 指令发送成功!
+export cardid=0&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=1&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=1&amp;&amp;selabel --clear 指令发送成功!
+export cardid=1&amp;&amp;qos-jsac --clear 指令发送成功!
+<br/> ------------------------------Captured stdout call------------------------------ <br/>export cardid=0&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=0&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=0&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=0&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=0&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=0&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=0&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=0&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=0&amp;&amp;defconf --tcpmss 0 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=1&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=1&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=1&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=1&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=1&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=1&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=1&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=1&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      32307 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32308 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32309 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32310 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32311 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32312 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32313 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32314 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32315 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32316 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32317 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32318 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32319 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32320 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32321 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32322 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32323 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32324 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32325 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32326 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32327 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32328 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32329 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32330 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      38139  36943  0 20:15 ?        00:00:00 bash -c ps -ef |grep nginx
+root      38154  38139  0 20:15 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:01:15 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      32307 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32308 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32309 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32310 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32311 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32312 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32313 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32314 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32315 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32316 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32317 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32318 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32319 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32320 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32321 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32322 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32323 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32324 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32325 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32326 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32327 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32328 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32329 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32330 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      38192  36943  0 20:15 ?        00:00:00 bash -c ps -ef |grep nginx
+root      38207  38192  0 20:15 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:01:15 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	1,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+get请求成功
+1、get普通请求的请求内容为：You got right!
+post请求成功
+2、post普通请求的请求内容为：You got right!
+get请求成功
+3、get请求内容包含第一个get黑名单返回的状态码为：You got right!
+<br/> ----------------------------Captured stdout teardown---------------------------- <br/>export cardid=0&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=0&amp;&amp;selabel --clear 指令发送成功!
+export cardid=0&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=1&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=1&amp;&amp;selabel --clear 指令发送成功!
+export cardid=1&amp;&amp;qos-jsac --clear 指令发送成功!
+<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-time">2021-01-19 12:19:59.580569</td>
+          <td>Case_rbm/http_check_get_post_uri_MIME/function.py::Test_http_check_get_post_uri_MIME::test_http_check_get_post_uri_MIME_a2</td>
+          <td class="col-duration">153.74</td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;http_check_get_post_uri_MIME.function.Test_http_check_get_post_uri_MIME object at 0x0000028BEA5CC668&gt;<br/><br/>    @allure.feature(&#x27;验证基于URI黑名单、get请求方法、post请求方法、MIME多种类型设置阻断的网页访问策略&#x27;)<br/>    def test_http_check_get_post_uri_MIME_a2(self):<br/>    	# 清空环境<br/>    	for i in self.clr_env:<br/>    		fun.cmd(i, &#x27;gw&#x27;)<br/>    <br/>    	# 下发配置<br/>    	fun.send(rbmExc, message.addhttp[&#x27;AddAgent&#x27;], rbmDomain, base_path)<br/>    	fun.wait_data(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.nginx_worker(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	# 检查配置下发是否成功<br/>    	# for key in self.case2_step1:<br/>    	# 	re = fun.cmd(self.case2_step1[key][0], &#x27;gw&#x27;)<br/>    	# 	print(re)<br/>    	# 	fun.wait_data(self.case2_step1[key][0], &#x27;gw&#x27;, self.case2_step1[key][1], &#x27;配置&#x27;, 100)<br/>    	# 	assert self.case2_step1[key][1] in re<br/>    <br/>    	fun.send(rbmExc, message.httpcheck2[&#x27;SetHttpCheck&#x27;], rbmDomain, base_path)<br/>    	fun.wait_data(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.nginx_worker(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	for key in self.case2_step2:<br/>    		re = fun.cmd(self.case2_step2[key][0], &#x27;gw&#x27;)<br/>    		print(re)<br/>    		fun.wait_data(self.case2_step2[key][0], &#x27;gw&#x27;, self.case2_step2[key][1], &#x27;配置&#x27;, 100)<br/>    		assert self.case2_step2[key][1] in re<br/>    <br/>    	# 1、发送get请求，不包含黑名单内容的普通请求<br/>    	content = http_check.http_get(url)<br/>    	print(&#x27;1、get普通请求的请求内容为：{}&#x27;.format(content))<br/>    	assert content == http_content<br/>    <br/>    	# 2、发送post请求，不包含黑名单内容的普通请求<br/>    	content = http_check.http_post(url)<br/>    	print(&#x27;2、post普通请求的请求内容为：{}&#x27;.format(content))<br/>    	assert content == http_content<br/>    <br/>    	# 3、发送get请求，请求内容包含第一个get黑名单<br/>    	status_code = http_check.http_get(url,self.case1_get_data1)<br/>    	print(&#x27;3、get请求内容包含第一个get黑名单返回的状态码为：{}&#x27;.format(status_code))<br/>&gt;   	assert status_code == 403<br/><span class="error">E    AssertionError: assert &#x27;You got right!&#x27; == 403</span><br/><br/>Case_rbm\http_check_get_post_uri_MIME\function.py:256: AssertionErrorself = &lt;common.rabbitmq.rabbitmq object at 0x0000028BE9A44E80&gt;<br/><br/>    def close(self):<br/>        &#x27;&#x27;&#x27;<br/>        关闭Rabbitmq服务器连接<br/>        调用方式为:实例化类名.close()<br/>        &#x27;&#x27;&#x27;<br/>        if self.__state:<br/>            try:<br/>&gt;               self.__s_rabbitmq.close()<br/><br/>common\rabbitmq.py:160: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _<br/><br/>self = &lt;BlockingConnection impl=&lt;SelectConnection CLOSED transport=None params=&lt;ConnectionParameters host=10.10.88.32 port=5671 virtual_host=/ ssl=True&gt;&gt;&gt;<br/>reply_code = 200, reply_text = &#x27;Normal shutdown&#x27;<br/><br/>    def close(self, reply_code=200, reply_text=&#x27;Normal shutdown&#x27;):<br/>        &quot;&quot;&quot;Disconnect from RabbitMQ. If there are any open channels, it will<br/>        attempt to close them prior to fully disconnecting. Channels which<br/>        have active consumers will attempt to send a Basic.Cancel to RabbitMQ<br/>        to cleanly stop the delivery of messages prior to closing the channel.<br/>    <br/>        :param int reply_code: The code number for the close<br/>        :param str reply_text: The text reason for the close<br/>    <br/>        :raises pika.exceptions.ConnectionWrongStateError: if called on a closed<br/>            connection (NEW in v1.0.0)<br/>        &quot;&quot;&quot;<br/>        if not self.is_open:<br/>            msg = &#x27;{}.close({}, {!r}) called on closed connection.&#x27;.format(<br/>                self.__class__.__name__, reply_code, reply_text)<br/>            LOGGER.error(msg)<br/>            raise exceptions.ConnectionWrongStateError(msg)<br/>    <br/>        LOGGER.info(&#x27;Closing connection (%s): %s&#x27;, reply_code, reply_text)<br/>    <br/>        # Close channels that remain opened<br/>        for impl_channel in compat.dictvalues(self._impl._channels):<br/>            channel = impl_channel._get_cookie()<br/>            if channel.is_open:<br/>                try:<br/>&gt;                   channel.close(reply_code, reply_text)<br/><br/>c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\blocking_connection.py:795: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _<br/><br/>self = &lt;BlockingChannel impl=&lt;Channel number=1 CLOSED conn=&lt;SelectConnection CLOSED transport=None params=&lt;ConnectionParameters host=10.10.88.32 port=5671 virtual_host=/ ssl=True&gt;&gt;&gt;&gt;<br/>reply_code = 200, reply_text = &#x27;Normal shutdown&#x27;<br/><br/>    def close(self, reply_code=0, reply_text=&quot;Normal shutdown&quot;):<br/>        &quot;&quot;&quot;Will invoke a clean shutdown of the channel with the AMQP Broker.<br/>    <br/>        :param int reply_code: The reply code to close the channel with<br/>        :param str reply_text: The reply text to close the channel with<br/>    <br/>        &quot;&quot;&quot;<br/>        LOGGER.debug(&#x27;Channel.close(%s, %s)&#x27;, reply_code, reply_text)<br/>    <br/>        self._impl._raise_if_not_open()<br/>    <br/>        try:<br/>            # Cancel remaining consumers<br/>            self._cancel_all_consumers()<br/>    <br/>            # Close the channel<br/>            self._impl.close(reply_code=reply_code, reply_text=reply_text)<br/>&gt;           self._flush_output(lambda: self.is_closed)<br/><br/>c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\blocking_connection.py:1522: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _<br/><br/>self = &lt;BlockingChannel impl=&lt;Channel number=1 CLOSED conn=&lt;SelectConnection CLOSED transport=None params=&lt;ConnectionParameters host=10.10.88.32 port=5671 virtual_host=/ ssl=True&gt;&gt;&gt;&gt;<br/>waiters = (&lt;function BlockingChannel.close.&lt;locals&gt;.&lt;lambda&gt; at 0x0000028BE83ABD90&gt;,)<br/><br/>    def _flush_output(self, *waiters):<br/>        &quot;&quot;&quot; Flush output and process input while waiting for any of the given<br/>        callbacks to return true. The wait is aborted upon channel-close or<br/>        connection-close.<br/>        Otherwise, processing continues until the output is flushed AND at least<br/>        one of the callbacks returns true. If there are no callbacks, then<br/>        processing ends when all output is flushed.<br/>    <br/>        :param waiters: sequence of zero or more callables taking no args and<br/>                        returning true when it&#x27;s time to stop processing.<br/>                        Their results are OR&#x27;ed together. An empty sequence is<br/>                        treated as equivalent to a waiter always returning true.<br/>        &quot;&quot;&quot;<br/>        if self.is_closed:<br/>            self._impl._raise_if_not_open()<br/>    <br/>        if not waiters:<br/>            waiters = self._ALWAYS_READY_WAITERS<br/>    <br/>&gt;       self._connection._flush_output(lambda: self.is_closed, *waiters)<br/><br/>c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\blocking_connection.py:1336: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _<br/><br/>self = &lt;BlockingConnection impl=&lt;SelectConnection CLOSED transport=None params=&lt;ConnectionParameters host=10.10.88.32 port=5671 virtual_host=/ ssl=True&gt;&gt;&gt;<br/>waiters = (&lt;function BlockingChannel._flush_output.&lt;locals&gt;.&lt;lambda&gt; at 0x0000028BEA5DA950&gt;, &lt;function BlockingChannel.close.&lt;locals&gt;.&lt;lambda&gt; at 0x0000028BE83ABD90&gt;)<br/>is_done = &lt;function BlockingConnection._flush_output.&lt;locals&gt;.&lt;lambda&gt; at 0x0000028BEA5DA9D8&gt;<br/><br/>    def _flush_output(self, *waiters):<br/>        &quot;&quot;&quot; Flush output and process input while waiting for any of the given<br/>        callbacks to return true. The wait is aborted upon connection-close.<br/>        Otherwise, processing continues until the output is flushed AND at least<br/>        one of the callbacks returns true. If there are no callbacks, then<br/>        processing ends when all output is flushed.<br/>    <br/>        :param waiters: sequence of zero or more callables taking no args and<br/>                        returning true when it&#x27;s time to stop processing.<br/>                        Their results are OR&#x27;ed together.<br/>        :raises: exceptions passed by impl if opening of connection fails or<br/>            connection closes.<br/>        &quot;&quot;&quot;<br/>        if self.is_closed:<br/>            raise exceptions.ConnectionWrongStateError()<br/>    <br/>        # Conditions for terminating the processing loop:<br/>        #   connection closed<br/>        #         OR<br/>        #   empty outbound buffer and no waiters<br/>        #         OR<br/>        #   empty outbound buffer and any waiter is ready<br/>        is_done = (lambda:<br/>                   self._closed_result.ready or<br/>                   ((not self._impl._transport or<br/>                     self._impl._get_write_buffer_size() == 0) and<br/>                    (not waiters or any(ready() for ready in waiters))))<br/>    <br/>        # Process I/O until our completion condition is satisfied<br/>        while not is_done():<br/>            self._impl.ioloop.poll()<br/>            self._impl.ioloop.process_timeouts()<br/>    <br/>        if self._closed_result.ready:<br/>            try:<br/>                if not isinstance(self._closed_result.value.error,<br/>                                  exceptions.ConnectionClosedByClient):<br/>                    LOGGER.error(&#x27;Unexpected connection close detected: %r&#x27;,<br/>                                 self._closed_result.value.error)<br/>&gt;                   raise self._closed_result.value.error<br/><span class="error">E                   pika.exceptions.StreamLostError: Stream connection lost: ConnectionResetError(10054, &#x27;远程主机强迫关闭了一个现有的连接。&#x27;, None, 10054, None)</span><br/><br/>c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\blocking_connection.py:522: StreamLostError<br/><br/>During handling of the above exception, another exception occurred:<br/><br/>self = &lt;class &#x27;http_check_get_post_uri_MIME.function.Test_http_check_get_post_uri_MIME&#x27;&gt;<br/><br/>    def teardown_class(self):<br/>    	# 回收环境<br/>    	for i in clr_env.clear_env:<br/>    		fun.cmd(i, &#x27;gw&#x27;)<br/>    <br/>&gt;   	fun.rbm_close()<br/><br/>Case_rbm\http_check_get_post_uri_MIME\function.py:354: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _<br/>common\fun.py:80: in rbm_close<br/>    rbm.close()<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _<br/><br/>self = &lt;common.rabbitmq.rabbitmq object at 0x0000028BE9A44E80&gt;<br/><br/>    def close(self):<br/>        &#x27;&#x27;&#x27;<br/>        关闭Rabbitmq服务器连接<br/>        调用方式为:实例化类名.close()<br/>        &#x27;&#x27;&#x27;<br/>        if self.__state:<br/>            try:<br/>                self.__s_rabbitmq.close()<br/>            except Exception as err:<br/>                print(&#x27;Rabbitmq连接: &#x27; + str(self.__host) + &#x27;:&#x27; + str(self.__port) + &#x27; 关闭失败!请检查相关配置.错误内容如下:&#x27;)<br/>                print(err)<br/>&gt;               sys.exit(0)  # 避免程序继续运行造成的异常崩溃,友好退出程序<br/><span class="error">E               SystemExit: 0</span><br/><br/>common\rabbitmq.py:164: SystemExit<br/> -----------------------------Captured stdout setup------------------------------ <br/>export cardid=0&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=0&amp;&amp;selabel --clear 指令发送成功!
+export cardid=0&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=1&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=1&amp;&amp;selabel --clear 指令发送成功!
+export cardid=1&amp;&amp;qos-jsac --clear 指令发送成功!
+<br/> ------------------------------Captured stdout call------------------------------ <br/>export cardid=0&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=0&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=0&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=0&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=0&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=0&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=0&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=0&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=0&amp;&amp;defconf --tcpmss 0 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=1&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=1&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=1&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=1&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=1&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=1&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=1&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=1&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      32307 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32308 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32309 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32310 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32311 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32312 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32313 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32314 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32315 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32316 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32317 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32318 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32319 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32320 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32321 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32322 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32323 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32324 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32325 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32326 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32327 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32328 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32329 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32330 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      39457  36943  0 20:17 ?        00:00:00 bash -c ps -ef |grep nginx
+root      39472  39457  0 20:17 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:01:15 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.cs_17.s9的Rabbitmq信息接收线程已开启!
+ps -ef |grep nginx 指令发送成功!
+Domain值为: hf.f1203.g01.cs_17.s9 的Rabbitmq信息接收管道关闭成功!
+这是进程的第1次等待
+ps -ef |grep nginx 指令发送成功!
+root      32307 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32308 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32309 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32310 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32311 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32312 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32313 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32314 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32315 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32316 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32317 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32318 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32319 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32320 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32321 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32322 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32323 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32324 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32325 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32326 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32327 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32328 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32329 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      32330 157514  0 20:10 ?        00:00:00 nginx: worker process
+root      39510  36943  0 20:17 ?        00:00:00 bash -c ps -ef |grep nginx
+root      39525  39510  0 20:17 ?        00:00:00 grep nginx
+root     157514      1  0 17:43 ?        00:01:15 nginx: master process /usr/local/nginx/sbin/nginx
+
+当前有24个进程启动成功
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+cat /etc/jsac/http.json 指令发送成功!
+{
+	&quot;c_http_uri&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;mzh&quot;, &quot;hkl&quot;]
+	},
+	&quot;s_content_type&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;css&quot;, &quot;avi&quot;]
+	},
+	&quot;c_get_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;hello&quot;, &quot;juson&quot;]
+	},
+	&quot;c_post_args&quot;:	{
+		&quot;w&quot;:	0,
+		&quot;k&quot;:	[&quot;123&quot;, &quot;456&quot;]
+	}
+}
+cat /etc/jsac/http.json 指令发送成功!
+get请求成功
+1、get普通请求的请求内容为：You got right!
+post请求成功
+2、post普通请求的请求内容为：You got right!
+get请求成功
+3、get请求内容包含第一个get黑名单返回的状态码为：You got right!
+<br/> ----------------------------Captured stdout teardown---------------------------- <br/>export cardid=0&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=0&amp;&amp;selabel --clear 指令发送成功!
+export cardid=0&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=1&amp;&amp;tupleacl --clear 指令发送成功!
+export cardid=1&amp;&amp;selabel --clear 指令发送成功!
+export cardid=1&amp;&amp;qos-jsac --clear 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=0&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=0&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=0&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=0&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=0&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=0&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=0&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=0&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=0&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=0&amp;&amp;defconf --tcpmss 0 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --switch on 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 12 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 13 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 15 --switch off 指令发送成功!
+export cardid=1&amp;&amp;switch-jsac --set --module 16 --switch off 指令发送成功!
+export cardid=1&amp;&amp;defconf  --action forward 指令发送成功!
+export cardid=1&amp;&amp;defconf --selabel on 指令发送成功!
+export cardid=1&amp;&amp;defconf --cycle 15 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4aclcycle 30 指令发送成功!
+export cardid=1&amp;&amp;defconf --domain off 指令发送成功!
+export cardid=1&amp;&amp;defconf --netflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ipv4acl off 指令发送成功!
+export cardid=1&amp;&amp;defconf --syncookie off 指令发送成功!
+export cardid=1&amp;&amp;defconf --ckoption off 指令发送成功!
+export cardid=1&amp;&amp;defconf --noflow off 指令发送成功!
+export cardid=1&amp;&amp;defconf --droperr off 指令发送成功!
+export cardid=1&amp;&amp;defconf --tcpmss 0 指令发送成功!
+Rabbitmq连接: 10.10.88.32:5671 关闭失败!请检查相关配置.错误内容如下:
+Stream connection lost: ConnectionResetError(10054, &#x27;远程主机强迫关闭了一个现有的连接。&#x27;, None, 10054, None)
+<br/> -----------------------------Captured log teardown------------------------------ <br/>ERROR    pika.adapters.utils.io_services_utils:diagnostic_utils.py:57 Wrapped func exited with exception. Caller&#x27;s stack:
+Traceback (most recent call last):
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\diagnostic_utils.py&quot;, line 53, in log_exception_func_wrap
+    return func(*args, **kwargs)
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\utils\io_services_utils.py&quot;, line 1295, in _produce
+    super(_AsyncSSLTransport, self)._produce()
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\utils\io_services_utils.py&quot;, line 820, in _produce
+    self._tx_buffers[0])
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\utils\io_services_utils.py&quot;, line 79, in retry_sigint_wrap
+    return func(*args, **kwargs)
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\utils\io_services_utils.py&quot;, line 861, in _sigint_safe_send
+    return sock.send(data)
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\ssl.py&quot;, line 941, in send
+    return self._sslobj.write(data)
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\ssl.py&quot;, line 642, in write
+    return self._sslobj.write(data)
+ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+Traceback (most recent call last):
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\diagnostic_utils.py&quot;, line 53, in log_exception_func_wrap
+    return func(*args, **kwargs)
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\utils\io_services_utils.py&quot;, line 1295, in _produce
+    super(_AsyncSSLTransport, self)._produce()
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\utils\io_services_utils.py&quot;, line 820, in _produce
+    self._tx_buffers[0])
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\utils\io_services_utils.py&quot;, line 79, in retry_sigint_wrap
+    return func(*args, **kwargs)
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\site-packages\pika\adapters\utils\io_services_utils.py&quot;, line 861, in _sigint_safe_send
+    return sock.send(data)
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\ssl.py&quot;, line 941, in send
+    return self._sslobj.write(data)
+  File &quot;c:\users\admin\appdata\local\programs\python\python36\lib\ssl.py&quot;, line 642, in write
+    return self._sslobj.write(data)
+ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+ERROR    pika.adapters.base_connection:base_connection.py:429 connection_lost: StreamLostError: (&quot;Stream connection lost: ConnectionResetError(10054, &#x27;远程主机强迫关闭了一个现有的连接。&#x27;, None, 10054, None)&quot;,)
+ERROR    pika.adapters.blocking_connection:blocking_connection.py:521 Unexpected connection close detected: StreamLostError: (&quot;Stream connection lost: ConnectionResetError(10054, &#x27;远程主机强迫关闭了一个现有的连接。&#x27;, None, 10054, None)&quot;,)<br/></div></td></tr></tbody></table></body></html>

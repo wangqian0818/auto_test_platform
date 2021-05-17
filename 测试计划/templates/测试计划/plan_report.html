@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>测试报告</title>
+</head>
+<body>
+<table border="1">
+    <tr>
+        <th>计划名称</th>
+        <th>运行环境</th>
+        <th>已选用例条数</th>
+        <th>已选用例id列表</th>
+        <th>成功用例条数</th>
+        <th>成功用例id列表</th>
+        <th>失败用例条数</th>
+        <th>失败用例id列表</th>
+        <th>耗时</th>
+        <th>测试目的</th>
+        <th>执行者</th>
+        <th>分析者</th>
+        <th>结果类型</th>
+        <th>分析结果</th>
+        <th>循环次数</th>
+        <th>组件版本</th>
+        <th>最后一次运行时间</th>
+        <th>下次计划</th>
+        <th>报告路径</th>
+        <th>下载报告</th>
+        <th>删除报告</th>
+    </tr>
+    {% for report in history_reports %}
+    <tr>
+        <td>{{ report.plan_name }}</td>
+        <td>{{ report.run_env }}</td>
+        <td>{{ report.case_num }}</td>
+        <td>{{ report.case_list }}</td>
+        <td>{{ report.pass_num }}</td>
+        <td>{{ report.pass_list }}</td>
+        <td>{{ report.fail_num }}</td>
+        <td>{{ report.fail_list }}</td>
+        <td>{{ report.time }}</td>
+        <td>{{ report.purpose }}</td>
+        <td>{{ report.executor }}</td>
+        <td>{{ report.analyst }}</td>
+        <td>{{ report.result_type }}</td>
+        <td>{{ report.analysis_result }}</td>
+        <td>{{ report.cycle_num }}</td>
+        <td>{{ report.component_version }}</td>
+        <td>{{ report.last_run }}</td>
+        <td>{{ report.last_plan }}</td>
+        <td>{{ report.report_path }}</td>
+        <td><a href="{% url 'download_report' report.pk %}">下载</a></td>
+        <td><a href="{% url 'delete_report' report.pk %}">删除</a></td>
+    </tr>
+    {% endfor %}
+</table>
+</body>
+</html>

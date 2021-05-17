@@ -1,0 +1,106 @@
+[{
+  "id": 1,
+  "text": "function",
+  "children": [
+    {
+      "id": 11,
+      "text": "rabbitMQ",
+      "children": [
+        {
+          "id": 111,
+          "text": "HTTP",
+          "children": [
+            {
+              "case_id": 40,
+              "text": "http_check_get"
+            },
+            {
+              "case_id": 41,
+              "text": "http_check_get_post_uri"
+            },
+            {
+              "case_id": 42,
+              "text": "http_check_get_post_uri_MIME"
+            },
+            {
+              "case_id": 43,
+              "text": "http_check_MIME_allow"
+            },
+            {
+              "case_id": 44,
+              "text": "http_check_MIME_deny"
+            },
+            {
+              "case_id": 45,
+              "text": "http_check_post"
+            },
+            {
+              "case_id": 46,
+              "text": "http_check_uri"
+            }
+          ]
+        },
+        {
+          "id": 112,
+          "text": "FTP",
+          "children": [
+            {
+              "case_id": 35,
+              "text": "ftp_check_alltype"
+            },
+            {
+              "case_id": 36,
+              "text": "ftp_check_delete"
+            },
+            {
+              "case_id": 37,
+              "text": "ftp_check_download"
+            },
+            {
+              "case_id": 38,
+              "text": "ftp_check_upload"
+            },
+            {
+              "case_id": 39,
+              "text": "ftp_check_user"
+            }
+          ]
+        },
+        {
+          "id": 113,
+          "text": "MAIL",
+          "children": [
+            {
+              "case_id": 49,
+              "text": "mail_check_addr"
+            },
+            {
+              "case_id": 50,
+              "text": "mail_check_alltype"
+            },
+            {
+              "case_id": 51,
+              "text": "mail_check_extend"
+            },
+            {
+              "case_id": 52,
+              "text": "mail_check_file"
+            },
+            {
+              "case_id": 53,
+              "text": "mail_check_subject"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "text": "SSH"
+    },
+    {
+      "id": 13,
+      "text": "interface"
+    }
+  ]
+}]

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>修改网页</title>
+</head>
+<body>
+<form action="{% url 'update_plan' plan.pk %}" method="post">
+    {% csrf_token %}
+    <p>测试计划名称  : <input type="text" name="plan_name" value="{{ plan.plan_name }}"></p>
+    <p>请输入测试目的 :
+    <select name="purpose">
+        <option value="空" selected>----------</option>
+        <option value="冒烟测试">冒烟测试</option>
+        <option value="回归bug">回归bug</option>
+        <option value="回归版本">回归版本</option>
+        <option value="出厂测试">出厂测试</option>
+        <option value="功能测试">功能测试</option>
+        <option value="性能测试">性能测试</option>
+        <option value="稳定性测试">稳定性测试</option>
+    </select>【原数据：{{ plan.purpose }}】</p>
+    <p>请输入结果类型 :
+    <select name="result_type">
+        <option value="空" selected>----------</option>
+        <option value="版本问题">版本问题</option>
+        <option value="环境问题">环境问题</option>
+        <option value="脚本问题">脚本问题</option>
+    </select>【原数据：{{ plan.result_type }}】
+    </p>
+    <p>请输入分析结果 : <input type="area" name="analysis_result" value="{{ plan.analysis_result }}"></p>
+    <p>请输入循环次数 : <input type="text" name="cycle_num" value="{{ plan.cycle_num }}"></p>
+    【 原GitCase列表：
+    {% for gitCase in checked_cases %}
+    {{ gitCase.case_title }} ---
+    {% endfor %}】
+    <p>请选择gitCase</p>
+    {% for gitCase in all_cases %}
+    <p><input type='checkbox' name='gitCase_title' value='{{ gitCase.id }}'>{{ gitCase.case_title }}</p>
+    {% endfor %}
+    <p><input type='submit' value='提交'></p>
+</form>
+</body>
+</html>
