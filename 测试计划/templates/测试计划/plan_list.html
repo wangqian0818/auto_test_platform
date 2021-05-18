@@ -62,59 +62,6 @@
     <button>添加计划</button>
 </a>
 <hr>
- 
-<div id="content">
-    <a id="dianji">点击</a>
-    <div id="disappare" style="display:none;">
-    <h2>标题</h2>
-    <p>3秒后我会自动消失3秒后我会自动消失</p>
-    </div>
-</div>
-<script type="text/javascript">
-    $(function(){
-        $("#dianji").click(function(){
-            $("#disappare").show().delay(3000).hide(300);
-        });
-    })
-</script>
-
-<hr>
-<div>
-    <button onclick="myFunction()">点我</button>
-</div>
-<p id="demo"></p>
+脚本运行状态：{{ case_run_status }}
 </body>
-<script>
-    function myFunction(){
-        var x;
-        var r=confirm("按下按钮!");
-        if (r==true){
-            x="你按下了\"确定\"按钮!";
-        }
-        else{
-            x="你按下了\"取消\"按钮!";
-        }
-        document.getElementById("demo").innerHTML=x;
-    }
-
-</script>
-
-<!--{% if messages %}-->
-<!--<script>-->
-<!--    {% for msg in messages %}-->
-<!--      alert('{{ msg.message }}');-->
-<!--    {% endfor %}-->
-<!--  -->
-<!--</script>-->
-<!--{% endif %}-->
-
-
-<!--{% if messages %}-->
-<!--<ul class="messages">-->
-<!--    {% for message in messages %}-->
-<!--    <li-->
-<!--    {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>-->
-<!--    {% endfor %}-->
-<!--</ul>-->
-<!--{% endif %}-->
 </html>

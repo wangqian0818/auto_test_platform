@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="http://apps.bdimg.com/libs/jquery/1.11.1/jquery.min.js"></script>
+</head>
+<body>
+
+<hr>
+<div id="content">
+    <a id="dianji">点击后，显示字体，并3秒后自动消失</a>
+    <div id="disappare" style="display:none;">
+        <h2>标题</h2>
+        <p>3秒后我会自动消失3秒后我会自动消失</p>
+    </div>
+</div>
+
+
+<hr>
+<div>
+    <button onclick="myFunction()">点击后，显示弹窗，并拿到你点击的‘确定’或者‘取消’</button>
+</div>
+<p id="demo"></p>
+
+<hr>
+<form action="">
+    <select name="customers" onchange="showCustomer(this.value)"
+            style="font-family:Verdana, Arial, Helvetica, sans-serif;">
+        <option value="APPLE">Apple Computer, Inc.</option>
+        <option value="BAIDU ">BAIDU, Inc</option>
+        <option value="Canon">Canon USA, Inc.</option>
+        <option value="Google">Google, Inc.</option>
+        <option value="Nokia">Nokia Corporation</option>
+        <option value="SONY">Sony Corporation of America</option>
+    </select>
+</form>
+<br>
+<div id="txtHint">客户信息将显示在这...</div>
+
+
+</body>
+
+<script type="text/javascript">
+    $(function(){
+        $("#dianji").click(function(){
+            $("#disappare").show().delay(3000).hide(300);
+        });
+    })
+
+
+
+
+
+</script>
+
+<script>
+    function myFunction(){
+        var x;
+        var r=confirm("按下按钮!");
+        if (r==true){
+            x="你按下了\"确定\"按钮!";
+        }
+        else{
+            x="你按下了\"取消\"按钮!";
+        }
+        document.getElementById("demo").innerHTML=x;
+    }
+
+
+
+
+
+</script>
+
+<script>
+    function showCustomer(str){
+      var xmlhttp;
+      if (str==""){
+        document.getElementById("txtHint").innerHTML="";
+        return;
+      }
+      if (window.XMLHttpRequest){
+        // IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+        xmlhttp=new XMLHttpRequest();
+      }
+      else{
+        // IE6, IE5 浏览器执行代码
+        xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+      }
+      xmlhttp.onreadystatechange=function(){
+        if (xmlhttp.readyState==4 && xmlhttp.status==200){
+          document.getElementById("txtHint").innerHTML=xmlhttp.responseText;
+        }
+      }
+<!--      alert(str)-->
+<!--      xmlhttp.open("GET","/plans",true);-->
+      xmlhttp.open("GET","/plans",true);
+      xmlhttp.send();
+    }
+
+
+
+
+
+</script>
+
+</html>

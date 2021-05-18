@@ -97,9 +97,10 @@ def main(cirNum=1):
         print("程序友好退出，请输入整数({})".format(err))
         sys.exit(0)
     print('循环{}次'.format(cirNum))
-    log_dirs = []
+    log_dirs = []  # 此次循环产生的日志路径
+    exist_faileds = []  # 存在failed的case文件夹名称
     for num in range(cirNum):
-        print('====================================== 第{}次执行 ======================================'.format(num + 1))
+        print('================================== 开始第{}次循环 =================================='.format(num + 1))
         # 验证并创建log保存目录
         current_time = time.strftime('%Y%m%d_%H-%M-%S', time.localtime(time.time()))
         if not os.path.exists(base_path + '/Logs/' + str(version) + '/' + current_time):  # 如果保存当前版本的logs目录不存在,就创建
@@ -145,7 +146,7 @@ def main(cirNum=1):
                     log = left + c + right + log_name + time.strftime('%Y%m%d_%H-%M-%S',
                                                                       time.localtime(time.time())) + right
                     abs_path = os.path.dirname(os.path.abspath(__file__))
-                    print('abs_path: ', abs_path)
+                    # print('abs_path: ', abs_path)
                     os.system('pytest ' + i + ' --html=' + abs_path + '/Logs/' + str(
                         version) + '/' + current_time + '/' + log + '.html --self-contained-html')
                     file.write("\n--------------------- 执行结束 case：%s\n\n\n" % i)
@@ -157,9 +158,14 @@ def main(cirNum=1):
                     src_log = log_dir + log + '.html'
                     des_log = log_dir + log + result + '.html'
                     os.rename(src_log, des_log)
-                    log_dirs.append(log_dir)
 
-                print('#################')
+                log_dirs.append(log_dir)
+                print('当前第{}次循环生成的报告文件夹名为：{}'.format(cirNum, log_dir))
+                print('log_dirs：{}'.format(log_dirs))
+                if 'failed' in result:
+                    exist_faileds.append(current_time)
+
+                print('###################################################')
             except Exception as err1:
                 print('执行Pytest测试失败!错误信息如下:')
                 print(err1)
@@ -171,10 +177,14 @@ def main(cirNum=1):
 
     print('自动化测试完成！')
     if 0 != len(log_dirs):
-        print("日志路径列表为：", log_dirs)
+        # print("日志路径为：", log_dirs)
+        if 0 == len(exist_faileds):
+            print('========================== 恭喜，此次循环执行用例{}次，全部成功！！！棒棒~'.format(cirNum))
+        else:
+            print('========================== 此次循环执行用例{}次，存在失败的用例，如下: \n{}'.format(cirNum, exist_faileds))
         return log_dirs
     else:
-        print("日志路径不存在，测试报告尚未生成")
+        print("========================== 日志路径不存在，测试报告尚未生成 ========================== ")
         return None
 
 
@@ -226,4 +236,4 @@ def get_result(result_file, case_path):
 
 
 if __name__ == '__main__':
-    main(cirNum=1)
+    main()

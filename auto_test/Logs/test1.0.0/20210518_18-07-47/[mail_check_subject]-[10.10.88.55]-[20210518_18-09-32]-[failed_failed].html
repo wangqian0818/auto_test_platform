@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>测试报告</title>
+    <style>body {
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: 12px;
+	min-width: 1200px;
+	color: #999;
+}
+
+h1 {
+	font-size: 24px;
+	color: black;
+}
+
+h2 {
+	font-size: 16px;
+	color: black;
+}
+
+p {
+    color: black;
+}
+
+a {
+	color: #999;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+
+#environment td {
+	padding: 5px;
+	border: 1px solid #E6E6E6;
+}
+
+#environment tr:nth-child(odd) {
+	background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed, .passed .col-result {
+	color: green;
+}
+span.skipped, span.xfailed, span.rerun, .skipped .col-result, .xfailed .col-result, .rerun .col-result {
+	color: orange;
+}
+span.error, span.failed, span.xpassed, .error .col-result, .failed .col-result, .xpassed .col-result  {
+	color: red;
+}
+
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+
+#results-table {
+	border: 1px solid #e6e6e6;
+	color: #999;
+	font-size: 12px;
+	width: 100%
+}
+
+#results-table th, #results-table td {
+	padding: 5px;
+	border: 1px solid #E6E6E6;
+	text-align: left
+}
+#results-table th {
+	font-weight: bold
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+
+.log:only-child {
+	height: inherit
+}
+.log {
+	background-color: #e6e6e6;
+	border: 1px solid #e6e6e6;
+	color: black;
+	display: block;
+	font-family: "Courier New", Courier, monospace;
+	height: 230px;
+	overflow-y: scroll;
+	padding: 5px;
+	white-space: pre-wrap
+}
+div.image {
+	border: 1px solid #e6e6e6;
+	float: right;
+	height: 240px;
+	margin-left: 5px;
+	overflow: hidden;
+	width: 320px
+}
+div.image img {
+	width: 320px
+}
+.collapsed {
+	display: none;
+}
+.expander::after {
+	content: " (展开详情)";
+	color: #BBB;
+	font-style: italic;
+	cursor: pointer;
+}
+.collapser::after {
+	content: " (隐藏详情)";
+	color: #BBB;
+	font-style: italic;
+	cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+	cursor: pointer;
+}
+
+.sort-icon {
+	font-size: 0px;
+	float: left;
+	margin-right: 5px;
+	margin-top: 5px;
+	/*triangle*/
+	width: 0;
+	height: 0;
+	border-left: 8px solid transparent;
+	border-right: 8px solid transparent;
+}
+
+.inactive .sort-icon {
+	/*finish triangle*/
+	border-top: 8px solid #E6E6E6;
+}
+
+.asc.active .sort-icon {
+	/*finish triangle*/
+	border-bottom: 8px solid #999;
+}
+
+.desc.active .sort-icon {
+	/*finish triangle*/
+	border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+/*
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);*/
+function add_collapse() {  // modify by linux超
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">显示详情</a> / ' +
+                            '<a href="javascript:hide_all_extras()">隐藏详情</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    toggle_sort_states(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+	// 修改用例报告显示的用例名称 add by linux超
+	var case_name_td = document.getElementsByClassName("col-name");
+		for(var i = 0; i < case_name_td.length; i++)
+			try{
+				case_name_td[i].innerText = case_name_td[i].innerText.split("\[")[1].split("\]")[0];
+			}
+			catch(err){
+				// 如果表格中没有[]会抛异常，如果抛异常我就显示null，如果你想显示别的东西自己改吧，因为通常只要我们使用参数化就有[]显示
+				case_name_td[i].innerText = "测试用例无参数化数据null";
+			}
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+    var multiplier = reversed ? -1 : 1;
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+        return multiplier * (key_a >= key_b ? 1 : -1);
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>[mail_check_subject]-[10.10.88.55]-[20210518_18-09-32].html</h1>
+    <p>生成报告时间18-May-2021 18:10:57 Pytest-Html版本：<a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v1.22.1.dev11+g4f729c1</p>
+    <h2>测试环境</h2>
+    <table id="environment">
+      <tr>
+        <td>Base URL</td>
+        <td></td></tr>
+      <tr>
+        <td>Packages</td>
+        <td>{&apos;pytest&apos;: &apos;4.5.0&apos;, &apos;py&apos;: &apos;1.10.0&apos;, &apos;pluggy&apos;: &apos;0.13.1&apos;}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.18362-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{&apos;allure-pytest&apos;: &apos;2.8.6&apos;, &apos;assume&apos;: &apos;2.4.2&apos;, &apos;base-url&apos;: &apos;1.4.2&apos;, &apos;cov&apos;: &apos;2.10.1&apos;, &apos;forked&apos;: &apos;1.3.0&apos;, &apos;instafail&apos;: &apos;0.4.2&apos;, &apos;metadata&apos;: &apos;1.11.0&apos;, &apos;ordering&apos;: &apos;0.6&apos;, &apos;reportlog&apos;: &apos;0.1.2&apos;, &apos;rerunfailures&apos;: &apos;9.1.1&apos;, &apos;sugar&apos;: &apos;0.9.4&apos;, &apos;xdist&apos;: &apos;2.2.0&apos;, &apos;html&apos;: &apos;1.22.1.dev11+g4f729c1&apos;}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.6.6</td></tr>
+      <tr>
+        <td>用例执行时间</td>
+        <td>2021-05-18 18:09:33</td></tr>
+      <tr>
+        <td>设备IP</td>
+        <td>10.10.88.55</td></tr></table>
+    <h2>用例统计</h2>
+    <p>所属部门: 卓讯-合肥测试部</p>
+    <p>测试人员: 王谦</p>
+    <p>执行了2个测试用例, 历时:83.71秒 . </p>
+    <p class="filter" hidden="true">(取消)勾选复选框, 以便筛选测试结果</p><input checked="true" class="filter" data-test-result="passed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">0 通过</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 跳过</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">2 失败</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 错误</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 预期失败</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 预期通过</span>, <input checked="true" class="filter" data-test-result="重跑" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="重跑">0 重跑</span>
+    <h2>测试结果</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">通过/失败</th>
+          <th class="sortable time" col="time">Time</th>
+          <th>Test_nodeId</th>
+          <th class="sortable numeric" col="duration">耗时</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">无测试结果, 试着选择其他测试结果条件</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-time">2021-05-18 10:10:05.239587</td>
+          <td>auto_test/Case_rbm/mail_check_subject/function.py::Test_mail_check_subject::test_mail_check_subject_a1</td>
+          <td class="col-duration">24.07</td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;mail_check_subject.function.Test_mail_check_subject object at 0x00000204F413EBE0&gt;<br/><br/>    @allure.feature(&#x27;验证基于主题关键字过滤的邮件策略&#x27;)<br/>    def test_mail_check_subject_a1(self):<br/>    <br/>    	# 下发配置<br/>    	fun.send(rbmExc, message.addsmtp[&#x27;AddAgent&#x27;], rbmDomain, base_path)<br/>    	fun.wait_data(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.nginx_worker(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.send(rbmExc, message.addpop3[&#x27;AddAgent&#x27;], rbmDomain, base_path)<br/>    	fun.wait_data(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.nginx_worker(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	# 检查配置下发是否成功<br/>    	for key in self.case1_step1:<br/>    		re = fun.wait_data(self.case1_step1[key][0], &#x27;gw&#x27;, self.case1_step1[key][1], &#x27;配置&#x27;, 100)<br/>    		print(re)<br/>&gt;   		assert self.case1_step1[key][1] in re<br/><span class="error">E     TypeError: argument of type &#x27;int&#x27; is not iterable</span><br/><br/>auto_test\Case_rbm\mail_check_subject\function.py:100: TypeError<br/>---------------------------- Captured stdout setup -----------------------------<br/>ssh 连接开始
+ssh连接主机：10.10.88.55  完成!
+ssh服务器: 10.10.88.55连接成功
+export cardid=0&amp;&amp;switch-jsac --set --switch on
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --switch on:Set successfully.
+
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --switch on ------------ 
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off:Set successfully.
+
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --module 12 --switch off ------------ 
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off:Set successfully.
+
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --module 13 --switch off ------------ 
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off:Set successfully.
+
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --module 15 --switch off ------------ 
+Set successfully.
+
+export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off:Set successfully.
+
+ ------------ fun_export cardid=0&amp;&amp;switch-jsac --set --module 16 --switch off ------------ 
+Set successfully.
+
+export cardid=0&amp;&amp;defconf  --action forward
+ ------------ fun_export cardid=0&amp;&amp;defconf  --action forward:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf  --action forward ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --selabel on
+ ------------ fun_export cardid=0&amp;&amp;defconf --selabel on:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --selabel on ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --cycle 15
+ ------------ fun_export cardid=0&amp;&amp;defconf --cycle 15:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --cycle 15 ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --ipv4aclcycle 30
+ ------------ fun_export cardid=0&amp;&amp;defconf --ipv4aclcycle 30:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --ipv4aclcycle 30 ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --domain off
+ ------------ fun_export cardid=0&amp;&amp;defconf --domain off:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --domain off ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --netflow off
+ ------------ fun_export cardid=0&amp;&amp;defconf --netflow off:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --netflow off ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --ipv4acl off
+ ------------ fun_export cardid=0&amp;&amp;defconf --ipv4acl off:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --ipv4acl off ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --syncookie off
+ ------------ fun_export cardid=0&amp;&amp;defconf --syncookie off:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --syncookie off ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --ckoption off
+ ------------ fun_export cardid=0&amp;&amp;defconf --ckoption off:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --ckoption off ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --noflow off
+ ------------ fun_export cardid=0&amp;&amp;defconf --noflow off:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --noflow off ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --droperr off
+ ------------ fun_export cardid=0&amp;&amp;defconf --droperr off:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --droperr off ------------ 
+Success.
+
+export cardid=0&amp;&amp;defconf --tcpmss 0
+ ------------ fun_export cardid=0&amp;&amp;defconf --tcpmss 0:Success.
+
+ ------------ fun_export cardid=0&amp;&amp;defconf --tcpmss 0 ------------ 
+Success.
+
+=========================== clear_env 结束 耗时：1.6274635791778564s ==================================
+当前时间为2021-05-18 18:09:35
+ ------------ fun_ps -ef |grep agentjsac:root      17147  17120  0 17:23 pts/0    00:00:00 sqlite3 /etc/jsac/agentjsac.new.db
+root      19170 389803  0 17:27 pts/3    00:00:00 tail -f /var/log/jsac.agentjsac.debug.log
+root      19800      1  2 17:32 ?        00:00:56 /usr/bin/agentjsac -c /etc/jsac/agentjsac.config
+root      62025  61883  0 18:05 ?        00:00:00 bash -c ps -ef |grep agentjsac
+root      62033  62025  0 18:05 ?        00:00:00 grep agentjsac
+
+ ------------ fun_ps -ef |grep agentjsac ------------ 
+wait_data_command:  ps -ef |grep agentjsac
+wait_data_device:  gw
+wait_data_context:  /usr/bin/agentjsac -c /etc/jsac/agentjsac.config
+wait_data_a0:  root      17147  17120  0 17:23 pts/0    00:00:00 sqlite3 /etc/jsac/agentjsac.new.db
+root      19170 389803  0 17:27 pts/3    00:00:00 tail -f /var/log/jsac.agentjsac.debug.log
+root      19800      1  2 17:32 ?        00:00:56 /usr/bin/agentjsac -c /etc/jsac/agentjsac.config
+root      62025  61883  0 18:05 ?        00:00:00 bash -c ps -ef |grep agentjsac
+root      62033  62025  0 18:05 ?        00:00:00 grep agentjsac
+
+当前时间为2021-05-18 18:09:40
+这是进程的第1次等待
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:11 nginx: master process /usr/local/nginx/sbin/nginx
+root      61700   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61701   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61702   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61703   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61704   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61705   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61706   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61707   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61708   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61709   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61710   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61711   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61712   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61713   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61714   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61715   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61716   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61717   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61718   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61719   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61720   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61721   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61722   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61723   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      62036  61883  0 18:05 ?        00:00:00 bash -c ps -ef |grep nginx
+root      62044  62036  0 18:05 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_non_context:  nginx: worker process is shutting down
+nginx_worker_a:  [&#x27;root       9945      1  6 17:16 ?        00:03:11 nginx: master process /usr/local/nginx/sbin/nginx&#x27;, &#x27;root      61700   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61701   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61702   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61703   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61704   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61705   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61706   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61707   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61708   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61709   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61710   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61711   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61712   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61713   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61714   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61715   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61716   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61717   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61718   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61719   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61720   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61721   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61722   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      61723   9945  0 18:05 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62036  61883  0 18:05 ?        00:00:00 bash -c ps -ef |grep nginx&#x27;, &#x27;root      62044  62036  0 18:05 ?        00:00:00 grep nginx&#x27;, &#x27;&#x27;]
+当前有24个进程启动成功
+24个进程全部启动成功
+=========================== data_check_setup_met 结束 耗时：5.281875848770142s ==================================
+----------------------------- Captured stdout call -----------------------------<br/>Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.xn_17.gw47的Rabbitmq信息接收线程已开启!
+当前时间为2021-05-18 18:09:41
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:11 nginx: master process /usr/local/nginx/sbin/nginx
+root      61700   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61701   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61702   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61703   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61704   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61705   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61706   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61707   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61708   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61709   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61710   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61711   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61712   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61713   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61714   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61715   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61716   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61717   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61718   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61719   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61720   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61721   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61722   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61723   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      62045  19800  0 18:05 ?        00:00:00 sh -c ps -ef | grep /usr/local/nginx/sbin/nginx | grep -qv grep
+root      62046  61883  0 18:05 ?        00:00:00 bash -c ps -ef |grep nginx
+root      62048  62045  0 18:05 ?        00:00:00 grep /usr/local/nginx/sbin/nginx
+root      62057  62046  0 18:05 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_a0:  root       9945      1  6 17:16 ?        00:03:11 nginx: master process /usr/local/nginx/sbin/nginx
+root      61700   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61701   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61702   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61703   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61704   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61705   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61706   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61707   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61708   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61709   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61710   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61711   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61712   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61713   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61714   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61715   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61716   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61717   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61718   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61719   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61720   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61721   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61722   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      61723   9945  0 18:05 ?        00:00:00 nginx: worker process
+root      62045  19800  0 18:05 ?        00:00:00 sh -c ps -ef | grep /usr/local/nginx/sbin/nginx | grep -qv grep
+root      62046  61883  0 18:05 ?        00:00:00 bash -c ps -ef |grep nginx
+root      62048  62045  0 18:05 ?        00:00:00 grep /usr/local/nginx/sbin/nginx
+root      62057  62046  0 18:05 ?        00:00:00 grep nginx
+
+Domain值为: hf.f1203.g01.xn_17.gw47 的Rabbitmq信息接收管道关闭成功!
+当前时间为2021-05-18 18:09:46
+这是进程的第1次等待
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:12 nginx: master process /usr/local/nginx/sbin/nginx
+root      62064   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62065   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62066   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62067   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62068   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62069   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62070   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62071   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62072   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62073   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62074   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62075   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62076   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62077   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62078   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62079   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62080   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62081   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62082   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62083   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62084   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62085   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62086   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62087   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62089  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      62097  62089  0 18:06 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_non_context:  nginx: worker process is shutting down
+nginx_worker_a:  [&#x27;root       9945      1  6 17:16 ?        00:03:12 nginx: master process /usr/local/nginx/sbin/nginx&#x27;, &#x27;root      62064   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62065   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62066   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62067   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62068   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62069   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62070   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62071   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62072   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62073   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62074   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62075   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62076   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62077   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62078   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62079   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62080   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62081   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62082   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62083   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62084   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62085   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62086   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62087   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62089  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx&#x27;, &#x27;root      62097  62089  0 18:06 ?        00:00:00 grep nginx&#x27;, &#x27;&#x27;]
+当前有24个进程启动成功
+24个进程全部启动成功
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.xn_17.gw47的Rabbitmq信息接收线程已开启!
+当前时间为2021-05-18 18:09:46
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:12 nginx: master process /usr/local/nginx/sbin/nginx
+root      62064   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62065   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62066   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62067   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62068   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62069   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62070   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62071   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62072   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62073   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62074   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62075   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62076   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62077   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62078   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62079   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62080   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62081   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62082   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62083   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62084   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62085   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62086   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62087   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62099  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      62110  62099  0 18:06 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_a0:  root       9945      1  6 17:16 ?        00:03:12 nginx: master process /usr/local/nginx/sbin/nginx
+root      62064   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62065   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62066   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62067   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62068   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62069   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62070   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62071   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62072   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62073   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62074   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62075   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62076   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62077   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62078   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62079   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62080   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62081   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62082   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62083   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62084   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62085   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62086   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62087   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62099  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      62110  62099  0 18:06 ?        00:00:00 grep nginx
+
+Domain值为: hf.f1203.g01.xn_17.gw47 的Rabbitmq信息接收管道关闭成功!
+当前时间为2021-05-18 18:09:51
+这是进程的第1次等待
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:14 nginx: master process /usr/local/nginx/sbin/nginx
+root      62114   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62115   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62116   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62117   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62118   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62119   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62120   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62121   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62122   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62123   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62124   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62125   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62126   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62127   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62128   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62129   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62130   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62131   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62132   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62133   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62134   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62135   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62136   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62137   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      62140  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      62148  62140  0 18:06 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_non_context:  nginx: worker process is shutting down
+nginx_worker_a:  [&#x27;root       9945      1  6 17:16 ?        00:03:14 nginx: master process /usr/local/nginx/sbin/nginx&#x27;, &#x27;root      62114   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62115   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62116   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62117   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62118   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62119   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62120   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62121   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62122   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62123   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62124   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62125   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62126   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62127   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62128   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62129   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62130   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62131   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62132   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62133   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62134   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62135   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62136   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62137   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62140  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx&#x27;, &#x27;root      62148  62140  0 18:06 ?        00:00:00 grep nginx&#x27;, &#x27;&#x27;]
+当前有24个进程启动成功
+24个进程全部启动成功
+当前时间为2021-05-18 18:09:51
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+wait_data_command:  cat /etc/jsac/protocol.stream
+wait_data_device:  gw
+wait_data_context:  smtp8885
+wait_data_a0:  
+这是配置的第1次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第2次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第3次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第4次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第5次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第6次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第7次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第8次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第9次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第10次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第11次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第12次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第13次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第14次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第15次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第16次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第17次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第18次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第19次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第20次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第21次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第22次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第23次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第24次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第25次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第26次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第27次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第28次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第29次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第30次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第31次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第32次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第33次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第34次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第35次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第36次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第37次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第38次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第39次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第40次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第41次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第42次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第43次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第44次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第45次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第46次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第47次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第48次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第49次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第50次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第51次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第52次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第53次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第54次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第55次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第56次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第57次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第58次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第59次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第60次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第61次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第62次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第63次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第64次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第65次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第66次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第67次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第68次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第69次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第70次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第71次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第72次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第73次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第74次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第75次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第76次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第77次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第78次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第79次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第80次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第81次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第82次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第83次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第84次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第85次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第86次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第87次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第88次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第89次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第90次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第91次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第92次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第93次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第94次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第95次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第96次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第97次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第98次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第99次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第100次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+配置检查结果失败
+0
+</div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-time">2021-05-18 10:10:45.258542</td>
+          <td>auto_test/Case_rbm/mail_check_subject/function.py::Test_mail_check_subject::test_mail_check_subject_a2</td>
+          <td class="col-duration">24.15</td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;mail_check_subject.function.Test_mail_check_subject object at 0x00000204F41F9320&gt;<br/><br/>    @allure.feature(&#x27;验证基于多个主题关键字过滤的邮件策略&#x27;)<br/>    def test_mail_check_subject_a2(self):<br/>    <br/>    	# 下发配置<br/>    	fun.send(rbmExc, message.addsmtp[&#x27;AddAgent&#x27;], rbmDomain, base_path)<br/>    	fun.wait_data(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.nginx_worker(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.send(rbmExc, message.addpop3[&#x27;AddAgent&#x27;], rbmDomain, base_path)<br/>    	fun.wait_data(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	fun.nginx_worker(&#x27;ps -ef |grep nginx&#x27;, &#x27;gw&#x27;, &#x27;nginx: worker process&#x27;)<br/>    	# 检查配置下发是否成功<br/>    	for key in self.case2_step1:<br/>    		re = fun.wait_data(self.case2_step1[key][0], &#x27;gw&#x27;, self.case2_step1[key][1], &#x27;配置&#x27;, 100)<br/>    		print(re)<br/>&gt;   		assert self.case2_step1[key][1] in re<br/><span class="error">E     TypeError: argument of type &#x27;int&#x27; is not iterable</span><br/><br/>auto_test\Case_rbm\mail_check_subject\function.py:150: TypeError<br/>---------------------------- Captured stdout setup -----------------------------<br/>当前时间为2021-05-18 18:10:15
+ ------------ fun_ps -ef |grep agentjsac:root      17147  17120  0 17:23 pts/0    00:00:00 sqlite3 /etc/jsac/agentjsac.new.db
+root      19170 389803  0 17:27 pts/3    00:00:00 tail -f /var/log/jsac.agentjsac.debug.log
+root      19800      1  2 17:32 ?        00:00:58 /usr/bin/agentjsac -c /etc/jsac/agentjsac.config
+root      62974  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep agentjsac
+root      62982  62974  0 18:06 ?        00:00:00 grep agentjsac
+
+ ------------ fun_ps -ef |grep agentjsac ------------ 
+wait_data_command:  ps -ef |grep agentjsac
+wait_data_device:  gw
+wait_data_context:  /usr/bin/agentjsac -c /etc/jsac/agentjsac.config
+wait_data_a0:  root      17147  17120  0 17:23 pts/0    00:00:00 sqlite3 /etc/jsac/agentjsac.new.db
+root      19170 389803  0 17:27 pts/3    00:00:00 tail -f /var/log/jsac.agentjsac.debug.log
+root      19800      1  2 17:32 ?        00:00:58 /usr/bin/agentjsac -c /etc/jsac/agentjsac.config
+root      62974  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep agentjsac
+root      62982  62974  0 18:06 ?        00:00:00 grep agentjsac
+
+当前时间为2021-05-18 18:10:20
+这是进程的第1次等待
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:17 nginx: master process /usr/local/nginx/sbin/nginx
+root      62941   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62942   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62943   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62944   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62945   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62946   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62947   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62948   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62949   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62950   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62951   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62952   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62953   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62954   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62955   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62956   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62957   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62958   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62959   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62960   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62961   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62962   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62963   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62964   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62985  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      62993  62985  0 18:06 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_non_context:  nginx: worker process is shutting down
+nginx_worker_a:  [&#x27;root       9945      1  6 17:16 ?        00:03:17 nginx: master process /usr/local/nginx/sbin/nginx&#x27;, &#x27;root      62941   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62942   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62943   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62944   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62945   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62946   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62947   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62948   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62949   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62950   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62951   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62952   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62953   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62954   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62955   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62956   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62957   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62958   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62959   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62960   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62961   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62962   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62963   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62964   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      62985  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx&#x27;, &#x27;root      62993  62985  0 18:06 ?        00:00:00 grep nginx&#x27;, &#x27;&#x27;]
+当前有24个进程启动成功
+24个进程全部启动成功
+=========================== data_check_setup_met 结束 耗时：5.243021726608276s ==================================
+----------------------------- Captured stdout call -----------------------------<br/>Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.xn_17.gw47的Rabbitmq信息接收线程已开启!
+当前时间为2021-05-18 18:10:21
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:17 nginx: master process /usr/local/nginx/sbin/nginx
+root      62941   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62942   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62943   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62944   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62945   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62946   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62947   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62948   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62949   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62950   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62951   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62952   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62953   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62954   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62955   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62956   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62957   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62958   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62959   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62960   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62961   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62962   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62963   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62964   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62994  19800  0 18:06 ?        00:00:00 sh -c ps -ef | grep /usr/local/nginx/sbin/nginx | grep -qv grep
+root      62996  62994  0 18:06 ?        00:00:00 grep /usr/local/nginx/sbin/nginx
+root      62998  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      63006  62998  0 18:06 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_a0:  root       9945      1  6 17:16 ?        00:03:17 nginx: master process /usr/local/nginx/sbin/nginx
+root      62941   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62942   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62943   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62944   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62945   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62946   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62947   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62948   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62949   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62950   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62951   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62952   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62953   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62954   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62955   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62956   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62957   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62958   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62959   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62960   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62961   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62962   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62963   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62964   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      62994  19800  0 18:06 ?        00:00:00 sh -c ps -ef | grep /usr/local/nginx/sbin/nginx | grep -qv grep
+root      62996  62994  0 18:06 ?        00:00:00 grep /usr/local/nginx/sbin/nginx
+root      62998  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      63006  62998  0 18:06 ?        00:00:00 grep nginx
+
+Domain值为: hf.f1203.g01.xn_17.gw47 的Rabbitmq信息接收管道关闭成功!
+当前时间为2021-05-18 18:10:26
+这是进程的第1次等待
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:18 nginx: master process /usr/local/nginx/sbin/nginx
+root      63010   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63011   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63012   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63013   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63014   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63015   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63016   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63017   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63018   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63019   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63020   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63021   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63022   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63023   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63024   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63025   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63026   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63027   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63028   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63029   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63030   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63031   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63032   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63033   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63034  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      63042  63034  0 18:06 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_non_context:  nginx: worker process is shutting down
+nginx_worker_a:  [&#x27;root       9945      1  6 17:16 ?        00:03:18 nginx: master process /usr/local/nginx/sbin/nginx&#x27;, &#x27;root      63010   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63011   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63012   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63013   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63014   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63015   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63016   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63017   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63018   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63019   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63020   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63021   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63022   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63023   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63024   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63025   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63026   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63027   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63028   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63029   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63030   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63031   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63032   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63033   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63034  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx&#x27;, &#x27;root      63042  63034  0 18:06 ?        00:00:00 grep nginx&#x27;, &#x27;&#x27;]
+当前有24个进程启动成功
+24个进程全部启动成功
+Rabbitmq服务器连接: 10.10.88.32:5671 成功.
+向Rabbitmq发送信息成功!
+Domain值为: hf.f1203.g01.xn_17.gw47的Rabbitmq信息接收线程已开启!
+当前时间为2021-05-18 18:10:26
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:18 nginx: master process /usr/local/nginx/sbin/nginx
+root      63010   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63011   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63012   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63013   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63014   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63015   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63016   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63017   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63018   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63019   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63020   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63021   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63022   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63023   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63024   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63025   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63026   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63027   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63028   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63029   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63030   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63031   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63032   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63033   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63043  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      63055  63043  0 18:06 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_a0:  root       9945      1  6 17:16 ?        00:03:18 nginx: master process /usr/local/nginx/sbin/nginx
+root      63010   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63011   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63012   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63013   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63014   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63015   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63016   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63017   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63018   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63019   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63020   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63021   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63022   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63023   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63024   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63025   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63026   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63027   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63028   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63029   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63030   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63031   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63032   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63033   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63043  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      63055  63043  0 18:06 ?        00:00:00 grep nginx
+
+Domain值为: hf.f1203.g01.xn_17.gw47 的Rabbitmq信息接收管道关闭成功!
+当前时间为2021-05-18 18:10:31
+这是进程的第1次等待
+ ------------ fun_ps -ef |grep nginx:root       9945      1  6 17:16 ?        00:03:19 nginx: master process /usr/local/nginx/sbin/nginx
+root      63059   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63060   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63061   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63062   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63063   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63064   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63065   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63066   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63067   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63068   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63069   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63070   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63071   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63072   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63073   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63074   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63075   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63076   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63077   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63078   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63079   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63080   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63081   9945  0 18:06 ?        00:00:00 nginx: worker process
+root      63082   9945  1 18:06 ?        00:00:00 nginx: worker process
+root      63097  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx
+root      63105  63097  0 18:06 ?        00:00:00 grep nginx
+
+ ------------ fun_ps -ef |grep nginx ------------ 
+wait_data_command:  ps -ef |grep nginx
+wait_data_device:  gw
+wait_data_context:  nginx: worker process
+wait_data_non_context:  nginx: worker process is shutting down
+nginx_worker_a:  [&#x27;root       9945      1  6 17:16 ?        00:03:19 nginx: master process /usr/local/nginx/sbin/nginx&#x27;, &#x27;root      63059   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63060   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63061   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63062   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63063   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63064   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63065   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63066   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63067   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63068   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63069   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63070   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63071   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63072   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63073   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63074   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63075   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63076   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63077   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63078   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63079   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63080   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63081   9945  0 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63082   9945  1 18:06 ?        00:00:00 nginx: worker process&#x27;, &#x27;root      63097  61883  0 18:06 ?        00:00:00 bash -c ps -ef |grep nginx&#x27;, &#x27;root      63105  63097  0 18:06 ?        00:00:00 grep nginx&#x27;, &#x27;&#x27;]
+当前有24个进程启动成功
+24个进程全部启动成功
+当前时间为2021-05-18 18:10:31
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+wait_data_command:  cat /etc/jsac/protocol.stream
+wait_data_device:  gw
+wait_data_context:  smtp8885
+wait_data_a0:  
+这是配置的第1次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第2次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第3次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第4次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第5次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第6次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第7次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第8次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第9次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第10次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第11次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第12次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第13次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第14次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第15次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第16次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第17次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第18次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第19次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第20次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第21次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第22次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第23次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第24次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第25次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第26次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第27次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第28次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第29次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第30次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第31次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第32次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第33次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第34次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第35次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第36次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第37次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第38次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第39次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第40次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第41次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第42次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第43次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第44次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第45次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第46次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第47次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第48次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第49次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第50次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第51次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第52次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第53次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第54次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第55次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第56次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第57次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第58次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第59次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第60次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第61次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第62次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第63次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第64次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第65次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第66次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第67次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第68次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第69次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第70次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第71次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第72次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第73次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第74次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第75次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第76次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第77次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第78次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第79次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第80次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第81次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第82次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第83次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第84次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第85次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第86次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第87次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第88次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第89次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第90次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第91次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第92次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第93次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第94次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第95次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第96次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第97次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第98次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第99次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+这是配置的第100次等待
+ ------------ fun_cat /etc/jsac/protocol.stream:
+ ------------ fun_cat /etc/jsac/protocol.stream ------------ 
+
+配置检查结果失败
+0
+</div></td></tr></tbody></table></body></html>

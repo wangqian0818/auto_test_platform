@@ -1,7 +1,19 @@
 
---------------------- 开始执行 case：E:/Projects_Py/django_prctice/auto_test_platform/auto_test/Case_rbm/http_check_get/function.py
-result: test_http_check_get_a1 -- passed		20210506_11-55-22
-result: test_http_check_get_a2 -- skipped		20210506_11-55-24
---------------------- 执行结束 case：E:/Projects_Py/django_prctice/auto_test_platform/auto_test/Case_rbm/http_check_get/function.py
+--------------------- 开始执行 case：E:/Projects_Py/django_prctice/auto_test_platform/auto_test/Case_rbm/iso_tcp/function.py
+result: test_iso_tcp_a1 -- passed		20210518_18-08-46
+--------------------- 执行结束 case：E:/Projects_Py/django_prctice/auto_test_platform/auto_test/Case_rbm/iso_tcp/function.py
+
+
+
+--------------------- 开始执行 case：E:/Projects_Py/django_prctice/auto_test_platform/auto_test/Case_rbm/mail_check_alltype/function.py
+result: test_mail_check_alltype_a1 -- failed		20210518_18-09-32
+--------------------- 执行结束 case：E:/Projects_Py/django_prctice/auto_test_platform/auto_test/Case_rbm/mail_check_alltype/function.py
+
+
+
+--------------------- 开始执行 case：E:/Projects_Py/django_prctice/auto_test_platform/auto_test/Case_rbm/mail_check_subject/function.py
+result: test_mail_check_subject_a1 -- failed		20210518_18-10-15
+result: test_mail_check_subject_a2 -- failed		20210518_18-10-57
+--------------------- 执行结束 case：E:/Projects_Py/django_prctice/auto_test_platform/auto_test/Case_rbm/mail_check_subject/function.py
 
 

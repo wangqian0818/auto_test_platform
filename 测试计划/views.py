@@ -2,6 +2,7 @@
 import datetime
 import json
 import os
+import time
 
 import django
 from django.contrib import messages
@@ -28,12 +29,13 @@ MESSAGE_TAGS = {
     messages.INFO: '',
     50: 'critical',
 }
-
+# 自动化测试脚本的运行状态：0就是非运行状态，1正在运行中
+case_run_status = 0
 
 
 # 测试用
 def dump(request):
-    return render(request, '测试计划/js_alert.html')
+    return render(request, '测试计划/test_ajax.html')
 
 
 # 测试用
@@ -43,10 +45,11 @@ def dump_checkbox(request):
 
 
 # 展示测试计划
-def plans(request, id=None):
-    print('-------------------------------plans: ', request.method)
-    plans = Plan.objects.all()
-    return render(request, '测试计划/plan_list.html', {'plans': plans})
+def plans(request):
+        print('-------------------------------plans: ', request.method)
+        print('------------- case_run_status: ', case_run_status)
+        plans = Plan.objects.all()
+        return render(request, '测试计划/plan_list.html', {'plans': plans, 'case_run_status': case_run_status})
 
 
 # 新增测试计划
@@ -144,11 +147,6 @@ def delete_plan(request, id):
 
 # 点击执行按钮，执行该id的测试计划
 def exec(request, id):
-    messages.debug(request, '%s SQL statements were executed.' % id)
-    messages.info(request, 'Three credits remain in your account.')
-    messages.success(request, 'Profile details updated.')
-    messages.warning(request, 'Your account expires in three days.')
-    messages.error(request, 'Document deleted.')
     print('-------------------------------exec: ', request.method)
     this_plan = list(Plan.objects.filter(pk=id))
     plan = this_plan[0]
@@ -167,21 +165,23 @@ def exec(request, id):
             case_title_list.append(case_title)
         print('--- case_title_list: ', case_title_list)
         # ===============================================================
-        # # 根据该测试计划中选中的case，更改selected.py文件
-        # change_selected(case_title_list=case_title_list)
+        # 根据该测试计划中选中的case，更改selected.py文件
+        change_selected(case_title_list=case_title_list)
         # 执行用例，计算耗时
-        # start_time = time.time()
-        # # 执行自动化测试脚本，因为存在循环多次执行，所以返回值是本地日志路径list
-        # html_logs_paths = run_auto_test(cirNum)
-        # waste_time = format(time.time() - start_time, '.3f') + ' s '
-        # print('--- 运行耗时：', waste_time)
-        # ===============================================================
-        # 模拟数据
-        html_logs_paths = [
-            'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210119_19-39-20\\',
-            'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210506_11-54-57\\']
-        waste_time = '20.213 s '
+        start_time = time.time()
+        # 执行自动化测试脚本，因为存在循环多次执行，所以返回值是本地日志路径list
+        html_logs_paths = run_auto_test(cirNum)
+        waste_time = format(time.time() - start_time, '.3f') + ' s '
         print('--- 运行耗时：', waste_time)
+        # ===============================================================
+        # # 模拟数据
+        # # html_logs_paths = [
+        # #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210119_19-39-20\\',
+        # #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210506_11-54-57\\']
+        # html_logs_paths = [
+        #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210518_16-26-10\\']
+        # waste_time = '20.213 s '
+        # print('--- 运行耗时：', waste_time)
         # ===============================================================
         messages.success(request, "执行结束，耗时" + waste_time)
         # 获取当前时间
@@ -314,6 +314,8 @@ def run_auto_test(cirNum):
     # print(version + '/' + last_log_dir)
     # main_log_path = r'E:\Projects_Py\django_prctice\django_test03\auto_test\Logs' + version + '\\' + last_log_dir
     # print('main_log_path: ', main_log_path)
+    # 执行结束，脚本运行状态改为0
+    case_run_status = 0
     return main_return
 
 

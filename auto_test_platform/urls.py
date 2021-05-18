@@ -23,7 +23,6 @@ urlpatterns = [
     path('dump/', plan_views.dump, name='dump'),
     path('dump_checkbox/', plan_views.dump_checkbox, name='dump_checkbox'),
     path('plans/', plan_views.plans, name='plans'),
-    path('plans/<id>/', plan_views.plans, name='to_plans'),
     path('add_plan/', plan_views.add_plan, name='add_plan'),
     path('update_plan/<id>/', plan_views.update_plan, name='update_plan'),
     path('delete_plan/<id>/', plan_views.delete_plan, name='delete_plan'),
