@@ -35,7 +35,8 @@ case_run_status = 0
 
 # 测试用
 def dump(request):
-    return render(request, '测试计划/test_ajax.html')
+    # return render(request, '测试计划/test_ajax.html')
+    return render(request, '测试计划/test.html')
 
 
 # 测试用
@@ -46,10 +47,10 @@ def dump_checkbox(request):
 
 # 展示测试计划
 def plans(request):
-        print('-------------------------------plans: ', request.method)
-        print('------------- case_run_status: ', case_run_status)
-        plans = Plan.objects.all()
-        return render(request, '测试计划/plan_list.html', {'plans': plans, 'case_run_status': case_run_status})
+    print('-------------------------------plans: ', request.method)
+    print('------------- case_run_status: ', case_run_status)
+    plans = Plan.objects.all()
+    return render(request, '测试计划/plan_list.html', {'plans': plans, 'case_run_status': case_run_status})
 
 
 # 新增测试计划
@@ -57,11 +58,13 @@ def add_plan(request):
     print('-------------------------------add_plan:', request.method)
     if 'POST' == request.method:
         # 新增或者更新页面选中的case
-        titles = request.POST.getlist('gitCase_title')
+        gitCase_ids = request.POST.getlist('gitCase_title')
         # 选中的用例个数
-        case_num = len(titles)
+        case_num = len(gitCase_ids)
+        # 根据选择的用例来判断运行环境
+        run_env = get_run_env(gitCase_ids)
         # 用-连接选中的用例id
-        case_list = '-'.join(titles)
+        case_list = '-'.join(gitCase_ids)
         print('--- case_list: ', case_list)
         plan_name = request.POST.get('plan_name')
         purpose = request.POST.get('purpose')
@@ -71,15 +74,36 @@ def add_plan(request):
         # 新建测试计划，结果分析这一块应该是空的
         # result_type = request.POST.get('result_type')
         # analysis_result = request.POST.get('analysis_result')
-        Plan.objects.get_or_create(plan_name=plan_name, case_list=case_list, case_num=case_num, purpose=purpose,
-                                   result_type='', analysis_result='', component_version=version,
+        Plan.objects.get_or_create(plan_name=plan_name, run_env=run_env, case_list=case_list, case_num=case_num,
+                                   purpose=purpose, result_type='', analysis_result='', component_version=version,
                                    last_run='', last_plan='', cycle_num=cycle_num)
         return HttpResponseRedirect('/plans')
     elif 'GET' == request.method:
-        print('---add_plan:get')
+        print('--- add_plan:get')
         # 查询所有用例，显示到计划页面，便于多选
         gitCases = GitCase.objects.all()
         return render(request, '测试计划/plan_add.html', {'gitCases': gitCases})
+
+
+# 根据选择的用例来判断运行环境
+def get_run_env(gitCase_ids):
+    # 根据case_id查询出用例执行环境
+    run_envs = []
+    for case_id in gitCase_ids:
+        gitCase = GitCase.objects.filter(pk=case_id)
+        run_env = gitCase[0].run_env
+        run_envs.append(run_env)
+    runs = []
+    runs.append(run_envs[0])
+    for env in run_envs:
+        if env != run_envs[0]:
+            runs.append(env)
+            print('env:', env)
+    run_str = '-'.join(runs)
+    print('--- run_str: ', run_str)
+    if len(runs) > 1:
+        print('--- 运行环境不统一')
+    return runs[0]
 
 
 # 更新测试计划
@@ -166,22 +190,22 @@ def exec(request, id):
         print('--- case_title_list: ', case_title_list)
         # ===============================================================
         # 根据该测试计划中选中的case，更改selected.py文件
-        change_selected(case_title_list=case_title_list)
-        # 执行用例，计算耗时
-        start_time = time.time()
-        # 执行自动化测试脚本，因为存在循环多次执行，所以返回值是本地日志路径list
-        html_logs_paths = run_auto_test(cirNum)
-        waste_time = format(time.time() - start_time, '.3f') + ' s '
-        print('--- 运行耗时：', waste_time)
-        # ===============================================================
-        # # 模拟数据
-        # # html_logs_paths = [
-        # #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210119_19-39-20\\',
-        # #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210506_11-54-57\\']
-        # html_logs_paths = [
-        #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210518_16-26-10\\']
-        # waste_time = '20.213 s '
+        # change_selected(case_title_list=case_title_list)
+        # # 执行用例，计算耗时
+        # start_time = time.time()
+        # # 执行自动化测试脚本，因为存在循环多次执行，所以返回值是本地日志路径list
+        # html_logs_paths = run_auto_test(cirNum)
+        # waste_time = format(time.time() - start_time, '.3f') + ' s '
         # print('--- 运行耗时：', waste_time)
+        # ===============================================================
+        # 模拟数据
+        # html_logs_paths = [
+        #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210119_19-39-20\\',
+        #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210506_11-54-57\\']
+        html_logs_paths = [
+            'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210518_16-26-10\\']
+        waste_time = '20.213 s '
+        print('--- 运行耗时：', waste_time)
         # ===============================================================
         messages.success(request, "执行结束，耗时" + waste_time)
         # 获取当前时间

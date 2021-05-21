@@ -74,10 +74,11 @@ def read_case(base_dir):
                 #       + run_env + '\t' + test_type + '\t' + owner + '\t' + Last_Modified + '\t'
                 #       + str(Modified_date))
                 if not GitCase.objects.filter(case_title=case_title):
-                    case_list.append(
-                        GitCase(case_title=case_title, case_type=case_type, case_module=case_module, priority=priority,
-                                run_env=run_env, test_type=test_type, owner=owner, Last_Modified=Last_Modified,
-                                Modified_date=Modified_date))
+                    print('暂时不将ssh模块的用例入库')
+                    # case_list.append(
+                    #     GitCase(case_title=case_title, case_type=case_type, case_module=case_module, priority=priority,
+                    #             run_env=run_env, test_type=test_type, owner=owner, Last_Modified=Last_Modified,
+                    #             Modified_date=Modified_date))
                 else:
                     print('已存在用例：', case_title)
                     pass
@@ -132,6 +133,11 @@ def import_db(case_list):
             + str(case.Modified_date))
     GitCase.objects.bulk_create(case_list)
     print('已成功插入{}条数据'.format(len(case_list)))
+
+
+def delete_case():
+    deleted_cases = GitCase.objects.filter().delete()
+    print('已成功删除{}条数据'.format(deleted_cases[0]))
 
 
 def tree_case_data():
@@ -213,8 +219,14 @@ def tree_case_data():
 
 
 if __name__ == '__main__':
+    # 入库
     case_list = read_case(base_dir)
     import_db(case_list)
+
+    # 全部删除case数据
+    # delete_case()
+
+    # 树状结构的case，用于页面的排版
     # tree_case_data()
     # html_logs_paths = [
     #     'E:\\Projects_Py\\django_prctice\\django_test03\\auto_test\\Logs\\test1.0.0\\20210428_10-53-02\\',

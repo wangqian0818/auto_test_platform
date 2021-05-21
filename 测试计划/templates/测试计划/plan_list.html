@@ -4,18 +4,65 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <script src="http://apps.bdimg.com/libs/jquery/1.11.1/jquery.min.js"></script>
+    <style type="text/css">
+        .t{
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            padding: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        tr:hover {background-color:#f5f5f5;}
+        .t th{
+            height: 50px;
+            background-color: #CCC;
+        }
+        .t td{
+            height: 40px;
+        }
+        .t .run_evn{
+            width: 260px;
+        }
+        .button {
+            margin-top:30px;
+            margin-bottom:50px;
+            float: right;
+            margin-right: 25px;
+            display: inline-block;
+            padding: 8px 15px;
+            font-size: 18px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            outline: none;
+            color: #fff;
+            background-color: #848484;
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 9px #424242;
+        }
+        .button:hover {background-color: #6E6E6E}
+        .button:active {
+          background-color: #585858;
+          box-shadow: 0 5px #2E2E2E;
+          transform: translateY(4px);
+        }
+    </style>
 </head>
 <body>
-<table border="1">
+<div style="overflow-x:auto;">
+<table class="t">
     <tr>
         <th>计划名称</th>
-        <th>运行环境</th>
-        <th>已选用例条数</th>
-        <th>已选用例id列表</th>
-        <th>成功用例条数</th>
-        <th>成功用例id列表</th>
-        <th>失败用例条数</th>
-        <th>失败用例id列表</th>
+        <th class="run_evn">运行环境</th>
+        <th>用例数</th>
+        <th>用例id</th>
+        <th>成功用例数</th>
+        <th>成功用例id</th>
+        <th>失败用例数</th>
+        <th>失败用例id</th>
         <th>耗时</th>
         <th>测试目的</th>
         <th>执行者</th>
@@ -53,13 +100,13 @@
         <td>{{ plan.last_plan }}</td>
         <td><a href="{% url 'update_plan' plan.pk %}">修改</a></td>
         <td><a href="{% url 'delete_plan' plan.pk %}">删除</a></td>
-        <td><a href="{% url 'exec' plan.pk %}">执行</a></td>
+        <td><a href="{% url 'exec' plan.pk %}"><button onclick="alert('开始执行用例!')" >执行</button></a></td>
         <td><a href="{% url 'history_report' plan.pk %}">查看报告</a></td>
     </tr>
     {% endfor %}
-</table>
+</table></div>
 <a href="{% url 'add_plan' %}">
-    <button>添加计划</button>
+    <button class="button">添加计划</button>
 </a>
 <hr>
 脚本运行状态：{{ case_run_status }}

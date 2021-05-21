@@ -3,18 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <title>测试报告</title>
+    <style type="text/css">
+        .t{
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            padding: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        tr:hover {background-color:#f5f5f5;}
+        .t th{
+            height: 50px;
+            background-color: #CCC;
+        }
+        .t td{
+            height: 40px;
+        }
+        .t .run_evn{
+            width: 270px;
+        }
+        .t .report_path{
+            text-align: left;
+        }
+    </style>
 </head>
 <body>
-<table border="1">
+<table class="t">
     <tr>
         <th>计划名称</th>
         <th>运行环境</th>
-        <th>已选用例条数</th>
-        <th>已选用例id列表</th>
-        <th>成功用例条数</th>
-        <th>成功用例id列表</th>
-        <th>失败用例条数</th>
-        <th>失败用例id列表</th>
+        <th>用例数</th>
+        <th>用例id列表</th>
+        <th>成功用例数</th>
+        <th>成功用例id</th>
+        <th>失败用例数</th>
+        <th>失败用例id</th>
         <th>耗时</th>
         <th>测试目的</th>
         <th>执行者</th>
@@ -25,7 +50,7 @@
         <th>组件版本</th>
         <th>最后一次运行时间</th>
         <th>下次计划</th>
-        <th>报告路径</th>
+        <th class="run_evn">报告路径</th>
         <th>下载报告</th>
         <th>删除报告</th>
     </tr>
@@ -49,7 +74,7 @@
         <td>{{ report.component_version }}</td>
         <td>{{ report.last_run }}</td>
         <td>{{ report.last_plan }}</td>
-        <td>{{ report.report_path }}</td>
+        <td class="report_path">{{ report.report_path }}</td>
         <td><a href="{% url 'download_report' report.pk %}">下载</a></td>
         <td><a href="{% url 'delete_report' report.pk %}">删除</a></td>
     </tr>
