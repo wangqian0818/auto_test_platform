@@ -18,10 +18,11 @@ from django.urls import path
 from 测试计划 import views as plan_views
 
 urlpatterns = [
-    path('', admin.site.urls),
+    path('index/', admin.site.urls),
     path('admin/', admin.site.urls),
     path('dump/', plan_views.dump, name='dump'),
     path('dump_checkbox/', plan_views.dump_checkbox, name='dump_checkbox'),
+    path('', plan_views.plans, name='plans'),
     path('plans/', plan_views.plans, name='plans'),
     path('add_plan/', plan_views.add_plan, name='add_plan'),
     path('update_plan/<id>/', plan_views.update_plan, name='update_plan'),
