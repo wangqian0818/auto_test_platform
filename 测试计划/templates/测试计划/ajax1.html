@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<input type="button" onclick="AjaxSubmit_set();" value="提交集合">
+
+<script src="/static/jquery-3.3.1.min.js"></script>
+
+<script>
+    function AjaxSubmit_set() {
+        var data_list = [
+            {'name':'james','age':34},
+            {'name':'durant','age':31},
+            {'name':'curry','age':30},
+        ];
+
+        $.ajax({
+            url:'/user13/ajax_submit_set/',
+            type:'POST',
+            tradition:true,
+            data:{data:JSON.stringify(data_list)},
+            success: function (arg) {
+
+            }
+        })
+    }
+</script>
+
+</body>
+</html>

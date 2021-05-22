@@ -35,7 +35,8 @@ case_run_status = 0
 
 # 测试用
 def dump(request):
-    # return render(request, '测试计划/test_ajax.html')
+    print('--- print(GET): ', request.GET)
+    print('--- print(POST): ', request.POST)
     return render(request, '测试计划/test.html')
 
 
@@ -164,6 +165,8 @@ def delete_plan(request, id):
     if 'GET' == request.method:
         print('--- delete_plan:get')
         Plan.objects.filter(pk=id).delete()
+        # 删除计划后，该计划对应的报告也需要全部删除
+        Report.objects.filter(plan_id=id).delete()
     elif 'POST' == request.method:
         print('--- delete_plan:post')
     return HttpResponseRedirect('/plans')
@@ -172,6 +175,12 @@ def delete_plan(request, id):
 # 点击执行按钮，执行该id的测试计划
 def exec(request, id):
     print('-------------------------------exec: ', request.method)
+    # print('--- 此刻的运行状态为: ', case_run_status)
+    # if case_run_status == 1:  # 正在运行中
+    #     print('------------- case_run_status: ', case_run_status)
+    #     plans = Plan.objects.all()
+    #     # return render(request, '测试计划/plan_list.html', {'plans': plans, 'case_run_status': case_run_status})
+    #     return HttpResponseRedirect('/plans')
     this_plan = list(Plan.objects.filter(pk=id))
     plan = this_plan[0]
     # 该plan选中的用例
@@ -190,22 +199,23 @@ def exec(request, id):
         print('--- case_title_list: ', case_title_list)
         # ===============================================================
         # 根据该测试计划中选中的case，更改selected.py文件
-        # change_selected(case_title_list=case_title_list)
-        # # 执行用例，计算耗时
-        # start_time = time.time()
-        # # 执行自动化测试脚本，因为存在循环多次执行，所以返回值是本地日志路径list
-        # html_logs_paths = run_auto_test(cirNum)
-        # waste_time = format(time.time() - start_time, '.3f') + ' s '
-        # print('--- 运行耗时：', waste_time)
-        # ===============================================================
-        # 模拟数据
-        # html_logs_paths = [
-        #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210119_19-39-20\\',
-        #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210506_11-54-57\\']
-        html_logs_paths = [
-            'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210518_16-26-10\\']
-        waste_time = '20.213 s '
+        change_selected(case_title_list=case_title_list)
+        # 执行用例，计算耗时
+        start_time = time.time()
+        # 执行自动化测试脚本，因为存在循环多次执行，所以返回值是本地日志路径list
+        html_logs_paths = run_auto_test(cirNum)
+        case_run_status = 0  # 运行完成后，状态改为0
+        waste_time = format(time.time() - start_time, '.3f') + ' s '
         print('--- 运行耗时：', waste_time)
+        # ===============================================================
+        # # 模拟数据
+        # # html_logs_paths = [
+        # #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210119_19-39-20\\',
+        # #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210506_11-54-57\\']
+        # html_logs_paths = [
+        #     'E:\\Projects_Py\\django_prctice\\auto_test_platform\\auto_test\\Logs\\test1.0.0\\20210518_16-26-10\\']
+        # waste_time = '20.213 s '
+        # print('--- 运行耗时：', waste_time)
         # ===============================================================
         messages.success(request, "执行结束，耗时" + waste_time)
         # 获取当前时间
@@ -259,7 +269,6 @@ def exec(request, id):
             print('--------- ftp主机{} 连接失败'.format(ftp_host))
     else:
         print('该测试计划没有选择用例')
-        messages.error(request, "该测试计划没有选择用例")
     return HttpResponseRedirect('/plans')
 
 
@@ -331,6 +340,7 @@ def read_logs(html_logs_paths='', plan_id=None):
 
 # 执行pytest,auto_test的run.py
 def run_auto_test(cirNum):
+    case_run_status = 1
     main_return = main(cirNum)
     # 返回：./Logs/test1.0.0/20210416_16-47-58/   需要以下过滤
     # last_log_dir = main_return.split('/')[3]
@@ -339,7 +349,6 @@ def run_auto_test(cirNum):
     # main_log_path = r'E:\Projects_Py\django_prctice\django_test03\auto_test\Logs' + version + '\\' + last_log_dir
     # print('main_log_path: ', main_log_path)
     # 执行结束，脚本运行状态改为0
-    case_run_status = 0
     return main_return
 
 

@@ -99,16 +99,29 @@
         <td>{{ plan.last_run }}</td>
         <td>{{ plan.last_plan }}</td>
         <td><a href="{% url 'update_plan' plan.pk %}">修改</a></td>
-        <td><a href="{% url 'delete_plan' plan.pk %}">删除</a></td>
-        <td><a href="{% url 'exec' plan.pk %}"><button onclick="alert('开始执行用例!')" >执行</button></a></td>
+<!--        <td><a href="{% url 'delete_plan' plan.pk %}" class="delete_plan">删除</a></td>-->
+<!--        <td><a href="#0" onclick="deletePlan()">删除</a></td>-->
+        <td><a href="{% url 'delete_plan' plan.pk %}" onclick="return confirm('删除后无法恢复,确定要删除吗?')">删除</a></td>
+        <td><a href="{% url 'exec' plan.pk %}" class="exec">执行</a></td>
         <td><a href="{% url 'history_report' plan.pk %}">查看报告</a></td>
     </tr>
     {% endfor %}
-</table></div>
-<a href="{% url 'add_plan' %}">
-    <button class="button">添加计划</button>
-</a>
+</table>
+</div>
+<a href="{% url 'add_plan' %}"><button class="button">添加计划</button></a>
+
 <hr>
 脚本运行状态：{{ case_run_status }}
+<p id="demo"></p>
+
+
+<script type="text/javascript">
+var exec = $('.exec');
+exec.click(function () {
+    alert('开始执行用例!\n脚本运行状态：{{ case_run_status }}');
+});
+
+
+</script>
 </body>
 </html>

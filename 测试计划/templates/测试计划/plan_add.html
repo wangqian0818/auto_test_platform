@@ -125,7 +125,7 @@ input[type=submit]{
     <p>请选择用例：</p>
     {% for gitCase in gitCases %}
     <label class="switch">
-        <input class="checkbox-input" id="{{ gitCase.pk }}" type="checkbox" name="gitCase_title">
+        <input class="checkbox-input" id="{{ gitCase.pk }}" type="checkbox" name="gitCase_title" value='{{ gitCase.id }}'>
         <label class="checkbox" for="{{ gitCase.pk }}"></label>
         <span>{{ gitCase.pk }}：{{ gitCase.case_title }}</span>
     </label>

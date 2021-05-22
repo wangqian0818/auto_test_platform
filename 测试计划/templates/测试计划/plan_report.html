@@ -76,7 +76,7 @@
         <td>{{ report.last_plan }}</td>
         <td class="report_path">{{ report.report_path }}</td>
         <td><a href="{% url 'download_report' report.pk %}">下载</a></td>
-        <td><a href="{% url 'delete_report' report.pk %}">删除</a></td>
+        <td><a href="{% url 'delete_report' report.pk %}" onclick="return confirm('删除后无法恢复,确定要删除吗?')">删除</a></td>
     </tr>
     {% endfor %}
 </table>
